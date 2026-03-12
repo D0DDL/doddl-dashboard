@@ -556,7 +556,7 @@ let allData = {};
 async function loadData() {
   try {
     // Step 1: Auth
-    setLoad(10, "Authenticating with Microsoft..."');
+    setLoad(10, 'Authenticating with Microsoft...');
     token = await getToken();
 
     // If null we are redirecting to login
