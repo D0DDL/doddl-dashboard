@@ -618,7 +618,7 @@ async function loadShopifyData(token, wsId, modelId) {
   const revByMonth = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      DATESMTH('Shopify_Orders_Headers_New'[Date Ordered]),
+      "Month", FORMAT('Shopify_Orders_Headers_New'[Date Ordered], "YYYY-MM"),
       "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price]),
       "Orders", DISTINCTCOUNT('Shopify_Orders_Headers_New'[Order ID])
     )
@@ -686,7 +686,7 @@ async function loadAmazonData(token, wsId, modelId) {
   const ukByMonth = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      DATESMTH('Amazon_UK_Orders'[Order Date]),
+      "Month", FORMAT('Amazon_UK_Orders'[Order Date], "YYYY-MM"),
       "Revenue", SUM('Amazon_UK_Orders'[Revenue]),
       "Units", SUM('Amazon_UK_Orders'[Units Ordered]),
       "Sessions", SUM('Amazon_UK_Orders'[Sessions])
@@ -696,7 +696,7 @@ async function loadAmazonData(token, wsId, modelId) {
   const usByMonth = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      DATESMTH('Amazon_US_Orders'[Order Date]),
+      "Month", FORMAT('Amazon_US_Orders'[Order Date], "YYYY-MM"),
       "Revenue", SUM('Amazon_US_Orders'[Revenue]),
       "Units", SUM('Amazon_US_Orders'[Units Ordered])
     )
@@ -705,7 +705,7 @@ async function loadAmazonData(token, wsId, modelId) {
   const euByMonth = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      DATESMTH('Amazon EU Orders'[Order Date]),
+      "Month", FORMAT('Amazon EU Orders'[Order Date], "YYYY-MM"),
       "Revenue", SUM('Amazon EU Orders'[Revenue]),
       "Units", SUM('Amazon EU Orders'[Units Ordered])
     )
@@ -779,8 +779,8 @@ function buildOverviewCharts() {
 
   // Latest date
   const allDates = [
-    ...(allData.shopifyRevByMonth||[]).map(r=>r['Date Ordered']||r['DATESMTH']||''),
-    ...(allData.amazonUK||[]).map(r=>r['Order Date']||'')
+    ...(allData.shopifyRevByMonth||[]).map(r=>r['Month']||''),
+    ...(allData.amazonUK||[]).map(r=>r['Month']||'')
   ].filter(Boolean).sort();
   const latestDate = allDates[allDates.length-1];
 
@@ -798,10 +798,10 @@ function buildOverviewCharts() {
 
   // ── Revenue by Month chart ──
   const months = getMonthLabels();
-  const shopifyByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>r['Date Ordered']||'', r=>r.Revenue||0);
-  const amzUKByM = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Revenue||0);
-  const amzUSByM = aggregateByMonth(allData.amazonUS||[], r=>r['Order Date']||'', r=>r.Revenue||0);
-  const amzEUByM = aggregateByMonth(allData.amazonEU||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const shopifyByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>r['Month']||'', r=>r.Revenue||0);
+  const amzUKByM = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Revenue||0);
+  const amzUSByM = aggregateByMonth(allData.amazonUS||[], r=>r['Month']||'', r=>r.Revenue||0);
+  const amzEUByM = aggregateByMonth(allData.amazonEU||[], r=>r['Month']||'', r=>r.Revenue||0);
 
   if(charts.revenueByMonth) charts.revenueByMonth.destroy();
   charts.revenueByMonth = new Chart(document.getElementById('revenueByMonthChart'), {
@@ -837,7 +837,7 @@ function buildOverviewCharts() {
   });
 
   // ── Orders by month ──
-  const ordersByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>r['Date Ordered']||'', r=>r.Orders||0);
+  const ordersByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>r['Month']||'', r=>r.Orders||0);
   if(charts.ordersByMonth) charts.ordersByMonth.destroy();
   charts.ordersByMonth = new Chart(document.getElementById('ordersByMonthChart'), {
     type:'bar',
@@ -891,9 +891,9 @@ function buildChannelCharts() {
   setKpi('ch-amzeu-units', fmtNum(amzEUUnits)+' units');
 
   const months = getMonthLabels();
-  const ukByM = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Revenue||0);
-  const usByM = aggregateByMonth(allData.amazonUS||[], r=>r['Order Date']||'', r=>r.Revenue||0);
-  const euByM = aggregateByMonth(allData.amazonEU||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const ukByM = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Revenue||0);
+  const usByM = aggregateByMonth(allData.amazonUS||[], r=>r['Month']||'', r=>r.Revenue||0);
+  const euByM = aggregateByMonth(allData.amazonEU||[], r=>r['Month']||'', r=>r.Revenue||0);
 
   if(charts.amazonByMarket) charts.amazonByMarket.destroy();
   charts.amazonByMarket = new Chart(document.getElementById('amazonByMarketChart'), {
@@ -923,9 +923,9 @@ function buildChannelCharts() {
   });
 
   // Units by market
-  const ukUnitsByM = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Units||0);
-  const usUnitsByM = aggregateByMonth(allData.amazonUS||[], r=>r['Order Date']||'', r=>r.Units||0);
-  const euUnitsByM = aggregateByMonth(allData.amazonEU||[], r=>r['Order Date']||'', r=>r.Units||0);
+  const ukUnitsByM = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Units||0);
+  const usUnitsByM = aggregateByMonth(allData.amazonUS||[], r=>r['Month']||'', r=>r.Units||0);
+  const euUnitsByM = aggregateByMonth(allData.amazonEU||[], r=>r['Month']||'', r=>r.Units||0);
   if(charts.amazonUnits) charts.amazonUnits.destroy();
   charts.amazonUnits = new Chart(document.getElementById('amazonUnitsChart'), {
     type:'line',
@@ -943,8 +943,8 @@ function buildChannelCharts() {
   setKpi('ch-cvr', avgCvr.toFixed(1)+'%');
 
   if(charts.amazonCvr) charts.amazonCvr.destroy();
-  const ukSessions = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Sessions||0);
-  const ukCvrByM = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Sessions>0?((r.Units||0)/r.Sessions*100):0);
+  const ukSessions = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Sessions||0);
+  const ukCvrByM = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Sessions>0?((r.Units||0)/r.Sessions*100):0);
   charts.amazonCvr = new Chart(document.getElementById('amazonCvrChart'), {
     type:'line',
     data:{labels:months, datasets:[{label:'UK CVR %',data:months.map(m=>+(ukCvrByM[m]||0).toFixed(2)),borderColor:'#6ee7b7',backgroundColor:'rgba(110,231,183,0.1)',fill:true,tension:0.4}]},
@@ -988,8 +988,8 @@ function buildMarketingCharts() {
 function buildOrdersCharts() {
   const orders = allData.shopifyRevByMonth||[];
   const months = getMonthLabels();
-  const ordersByM = aggregateByMonth(orders, r=>r['Date Ordered']||'', r=>r.Orders||0);
-  const revByM = aggregateByMonth(orders, r=>r['Date Ordered']||'', r=>r.Revenue||0);
+  const ordersByM = aggregateByMonth(orders, r=>r['Month']||'', r=>r.Orders||0);
+  const revByM = aggregateByMonth(orders, r=>r['Month']||'', r=>r.Revenue||0);
 
   const totalOrders = orders.reduce((s,r)=>s+(r.Orders||0),0);
   const totalRev = orders.reduce((s,r)=>s+(r.Revenue||0),0);
@@ -1028,7 +1028,7 @@ function buildOrdersCharts() {
   tbody.innerHTML = recent.slice(0,50).map(r=>{
     const cancelled = r.Cancelled||r['Order Cancelled Date'];
     const status = cancelled ? '<span style="color:var(--negative)">Cancelled</span>' : '<span style="color:var(--positive)">Active</span>';
-    const date = (r.Date||r['Date Ordered']||'').toString().substring(0,10);
+    const date = (r.Date||r['Month']||'').toString().substring(0,10);
     return `<tr>
       <td class="label">${r.OrderNum||r['Order Number']||'—'}</td>
       <td>${date}</td>
@@ -1060,10 +1060,10 @@ function selectMonth(month) {
   document.getElementById('monthChartTitle').textContent = month+' — Revenue by Channel';
   document.getElementById('monthTableTitle').textContent = month+' — Detailed Breakdown';
 
-  const shopifyRev = (allData.shopifyRevByMonth||[]).find(r=>(r['Date Ordered']||'').substring(0,7)===month.replace(' ','').substring(0,7));
-  const amzUK = (allData.amazonUK||[]).find(r=>(r['Order Date']||'').substring(0,7)===toYearMonth(month));
-  const amzUS = (allData.amazonUS||[]).find(r=>(r['Order Date']||'').substring(0,7)===toYearMonth(month));
-  const amzEU = (allData.amazonEU||[]).find(r=>(r['Order Date']||'').substring(0,7)===toYearMonth(month));
+  const shopifyRev = (allData.shopifyRevByMonth||[]).find(r=>(r['Month']||'').substring(0,7)===month.replace(' ','').substring(0,7));
+  const amzUK = (allData.amazonUK||[]).find(r=>(r['Month']||'').substring(0,7)===toYearMonth(month));
+  const amzUS = (allData.amazonUS||[]).find(r=>(r['Month']||'').substring(0,7)===toYearMonth(month));
+  const amzEU = (allData.amazonEU||[]).find(r=>(r['Month']||'').substring(0,7)===toYearMonth(month));
 
   const revData = [
     {label:'Shopify', rev:shopifyRev?.Revenue||0, orders:shopifyRev?.Orders||0},
@@ -1110,7 +1110,7 @@ function selectMonth(month) {
 function getMonthLabels() {
   const set = new Set();
   [...(allData.shopifyRevByMonth||[]), ...(allData.amazonUK||[])].forEach(r=>{
-    const d = r['Date Ordered']||r['Order Date']||'';
+    const d = r['Month']||'';
     if(d) set.add(d.substring(0,7));
   });
   return [...set].sort().map(ym=>{
