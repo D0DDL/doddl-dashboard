@@ -172,8 +172,10 @@
     </div>
     <div class="header-right">
       <span class="last-refresh" id="lastRefresh">—</span>
+      <span class="last-refresh" id="userDisplay" style="color:var(--accent)"></span>
       <span class="live-badge">Live · Fabric</span>
       <button class="refresh-btn" onclick="refreshData()">↻ Refresh</button>
+      <button class="refresh-btn" onclick="signOut()" style="color:var(--negative);border-color:rgba(248,113,113,0.2)">Sign out</button>
     </div>
   </div>
 
@@ -367,13 +369,23 @@
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const CONFIG = {
-  tenantId:     '927d1e2c-7c8d-406f-8640-678dfce86b7d',
-  clientId:     '42c64061-ba34-4109-8aa8-ae4f55c62f9f',
-  clientSecret: 'JDs8Q~.B73kDUZpHirS4m045hDIEcpedbH4kSbGJ',
-  sqlEndpoint:  'fqph3eunprxubbsam6g7z2dlpu-zlz2sij3dwoeffepjfq4coqe4m.datawarehouse.fabric.microsoft.com',
-  database:     'Doddl_Lakehouse_LIVE_WINSDOR',
-  scope:        'https://analysis.windows.net/powerbi/api/.default'
+  tenantId:    '927d1e2c-7c8d-406f-8640-678dfce86b7d',
+  clientId:    '42c64061-ba34-4109-8aa8-ae4f55c62f9f',
+  scopes:      ['https://analysis.windows.net/powerbi/api/Dataset.Read.All',
+                'https://analysis.windows.net/powerbi/api/Workspace.Read.All']
 };
+
+// ─── MSAL CONFIG ──────────────────────────────────────────────────────────
+const msalConfig = {
+  auth: {
+    clientId:    CONFIG.clientId,
+    authority:   'https://login.microsoftonline.com/' + CONFIG.tenantId,
+    redirectUri: window.location.href.split('?')[0].split('#')[0]
+  },
+  cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+};
+
+let msalInstance = null;
 
 // ─── CHART DEFAULTS ────────────────────────────────────────────────────────
 Chart.defaults.color = '#64748b';
@@ -422,24 +434,48 @@ function showError(msg) {
   document.getElementById('errorMsg').textContent = msg;
 }
 
-// ─── AUTH: Get token via CORS proxy workaround ─────────────────────────────
-// Since client_credentials flow requires a backend, we use the Fabric REST API
-// via a thin proxy call. The token fetch hits the Azure token endpoint directly.
+// ─── AUTH: MSAL browser login ──────────────────────────────────────────────
 async function getToken() {
-  const url = `https://login.microsoftonline.com/${CONFIG.tenantId}/oauth2/v2.0/token`;
-  const body = new URLSearchParams({
-    grant_type:    'client_credentials',
-    client_id:     CONFIG.clientId,
-    client_secret: CONFIG.clientSecret,
-    scope:         CONFIG.scope
-  });
-  const resp = await fetch(url, { method:'POST', body, headers:{'Content-Type':'application/x-www-form-urlencoded'} });
-  if(!resp.ok) {
-    const err = await resp.json();
-    throw new Error(err.error_description || 'Auth failed');
+  if(!msalInstance) {
+    await loadMSAL();
+    msalInstance = new msal.PublicClientApplication(msalConfig);
+    await msalInstance.initialize();
   }
-  const data = await resp.json();
-  return data.access_token;
+
+  // Handle redirect response if returning from login
+  const redirectResult = await msalInstance.handleRedirectPromise();
+  if(redirectResult) return redirectResult.accessToken;
+
+  // Check for existing account
+  const accounts = msalInstance.getAllAccounts();
+
+  if(accounts.length > 0) {
+    try {
+      const silentResult = await msalInstance.acquireTokenSilent({
+        scopes: CONFIG.scopes,
+        account: accounts[0]
+      });
+      return silentResult.accessToken;
+    } catch(e) {
+      // Silent failed — fall through to interactive
+    }
+  }
+
+  // Interactive login
+  setLoad(15, 'Redirecting to Microsoft login...');
+  await msalInstance.loginRedirect({ scopes: CONFIG.scopes });
+  return null; // page will redirect
+}
+
+function loadMSAL() {
+  return new Promise((resolve, reject) => {
+    if(window.msal) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Failed to load MSAL library'));
+    document.head.appendChild(s);
+  });
 }
 
 // ─── QUERY FABRIC via REST API ────────────────────────────────────────────
@@ -520,8 +556,17 @@ let allData = {};
 async function loadData() {
   try {
     // Step 1: Auth
-    setLoad(10, 'Authenticating with Azure AD...');
+    setLoad(10, "Authenticating with Microsoft..."');
     token = await getToken();
+
+    // If null we are redirecting to login
+    if(!token) return;
+
+    // Show user name
+    if(msalInstance) {
+      const accs = msalInstance.getAllAccounts();
+      if(accs.length > 0) document.getElementById("userDisplay").textContent = accs[0].name || accs[0].username;
+    }
 
     // Step 2: Find workspace
     setLoad(25, 'Finding Doddl workspace...');
@@ -1103,6 +1148,15 @@ async function refreshData() {
   document.getElementById('loadingScreen').style.display='flex';
   document.getElementById('dashboard').style.display='none';
   await loadData();
+}
+
+async function signOut() {
+  if(msalInstance) {
+    const accounts = msalInstance.getAllAccounts();
+    if(accounts.length > 0) {
+      await msalInstance.logoutRedirect({ account: accounts[0] });
+    }
+  }
 }
 
 // ── START ──
