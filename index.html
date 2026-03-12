@@ -649,6 +649,7 @@ async function loadShopifyData(token, wsId, modelId) {
     SUMMARIZECOLUMNS(
       'Shopify_Orders_Headers_New'[Sales Channel],
       "Revenue", SUM('Shopify_Orders_Headers_New'[Order Total Revenue]),
+      "Orders", DISTINCTCOUNT('Shopify_Orders_Headers_New'[Order ID]),
       "Units", SUM('Shopify_Orders_Headers_New'[Units Ordered])
     )
   `);
@@ -799,8 +800,8 @@ function buildOverviewCharts() {
 
   // Latest date
   const allDates = [
-    ...(allData.shopifyRevByMonth||[]).map(r=>r['Month']||''),
-    ...(allData.amazonUK||[]).map(r=>r['Month']||'')
+    ...(allData.shopifyRevByMonth||[]).map(r=>toYM(r['Date Ordered']||r['Order Date']||'')),
+    ...(allData.amazonUK||[]).map(r=>toYM(r['Date Ordered']||r['Order Date']||''))
   ].filter(Boolean).sort();
   const latestDate = allDates[allDates.length-1];
 
@@ -818,10 +819,10 @@ function buildOverviewCharts() {
 
   // ── Revenue by Month chart ──
   const months = getMonthLabels();
-  const shopifyByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>r['Month']||'', r=>r.Revenue||0);
-  const amzUKByM = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Revenue||0);
-  const amzUSByM = aggregateByMonth(allData.amazonUS||[], r=>r['Month']||'', r=>r.Revenue||0);
-  const amzEUByM = aggregateByMonth(allData.amazonEU||[], r=>r['Month']||'', r=>r.Revenue||0);
+  const shopifyByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
+  const amzUKByM = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
+  const amzUSByM = aggregateByMonth(allData.amazonUS||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
+  const amzEUByM = aggregateByMonth(allData.amazonEU||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
 
   if(charts.revenueByMonth) charts.revenueByMonth.destroy();
   charts.revenueByMonth = new Chart(document.getElementById('revenueByMonthChart'), {
@@ -857,7 +858,7 @@ function buildOverviewCharts() {
   });
 
   // ── Orders by month ──
-  const ordersByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>r['Month']||'', r=>r.Orders||0);
+  const ordersByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Orders||0);
   if(charts.ordersByMonth) charts.ordersByMonth.destroy();
   charts.ordersByMonth = new Chart(document.getElementById('ordersByMonthChart'), {
     type:'bar',
@@ -866,10 +867,11 @@ function buildOverviewCharts() {
   });
 
   // ── AOV by channel ──
-  const channels = (allData.shopifyRevByChannel||[]).map(r=>r['Sales Channel']||r.Sales_Channel||'Unknown').filter(Boolean).slice(0,6);
+  const channels = (allData.shopifyRevByChannel||[]).map(r=>r['Sales Channel']||'Unknown').filter(Boolean).slice(0,6);
   const aovVals = (allData.shopifyRevByChannel||[]).slice(0,6).map(r=>{
-    const rev = r.Revenue||0; const units = r.Units||1;
-    return +(rev/units).toFixed(2);
+    const rev = r.Revenue||0;
+    const orders = r.Orders||r.Units||1;
+    return +(rev/orders).toFixed(2);
   });
   if(charts.aovByChannel) charts.aovByChannel.destroy();
   charts.aovByChannel = new Chart(document.getElementById('aovByChannelChart'), {
@@ -911,9 +913,9 @@ function buildChannelCharts() {
   setKpi('ch-amzeu-units', fmtNum(amzEUUnits)+' units');
 
   const months = getMonthLabels();
-  const ukByM = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Revenue||0);
-  const usByM = aggregateByMonth(allData.amazonUS||[], r=>r['Month']||'', r=>r.Revenue||0);
-  const euByM = aggregateByMonth(allData.amazonEU||[], r=>r['Month']||'', r=>r.Revenue||0);
+  const ukByM = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
+  const usByM = aggregateByMonth(allData.amazonUS||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
+  const euByM = aggregateByMonth(allData.amazonEU||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
 
   if(charts.amazonByMarket) charts.amazonByMarket.destroy();
   charts.amazonByMarket = new Chart(document.getElementById('amazonByMarketChart'), {
@@ -943,9 +945,9 @@ function buildChannelCharts() {
   });
 
   // Units by market
-  const ukUnitsByM = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Units||0);
-  const usUnitsByM = aggregateByMonth(allData.amazonUS||[], r=>r['Month']||'', r=>r.Units||0);
-  const euUnitsByM = aggregateByMonth(allData.amazonEU||[], r=>r['Month']||'', r=>r.Units||0);
+  const ukUnitsByM = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Units||0);
+  const usUnitsByM = aggregateByMonth(allData.amazonUS||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Units||0);
+  const euUnitsByM = aggregateByMonth(allData.amazonEU||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Units||0);
   if(charts.amazonUnits) charts.amazonUnits.destroy();
   charts.amazonUnits = new Chart(document.getElementById('amazonUnitsChart'), {
     type:'line',
@@ -963,8 +965,8 @@ function buildChannelCharts() {
   setKpi('ch-cvr', avgCvr.toFixed(1)+'%');
 
   if(charts.amazonCvr) charts.amazonCvr.destroy();
-  const ukSessions = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Sessions||0);
-  const ukCvrByM = aggregateByMonth(allData.amazonUK||[], r=>r['Month']||'', r=>r.Sessions>0?((r.Units||0)/r.Sessions*100):0);
+  const ukSessions = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Sessions||0);
+  const ukCvrByM = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Sessions>0?((r.Units||0)/r.Sessions*100):0);
   charts.amazonCvr = new Chart(document.getElementById('amazonCvrChart'), {
     type:'line',
     data:{labels:months, datasets:[{label:'UK CVR %',data:months.map(m=>+(ukCvrByM[m]||0).toFixed(2)),borderColor:'#6ee7b7',backgroundColor:'rgba(110,231,183,0.1)',fill:true,tension:0.4}]},
@@ -1008,8 +1010,8 @@ function buildMarketingCharts() {
 function buildOrdersCharts() {
   const orders = allData.shopifyRevByMonth||[];
   const months = getMonthLabels();
-  const ordersByM = aggregateByMonth(orders, r=>r['Month']||'', r=>r.Orders||0);
-  const revByM = aggregateByMonth(orders, r=>r['Month']||'', r=>r.Revenue||0);
+  const ordersByM = aggregateByMonth(orders, r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Orders||0);
+  const revByM = aggregateByMonth(orders, r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
 
   const totalOrders = orders.reduce((s,r)=>s+(r.Orders||0),0);
   const totalRev = orders.reduce((s,r)=>s+(r.Revenue||0),0);
@@ -1142,8 +1144,15 @@ function getMonthLabels() {
 
 function toYM(d) {
   if(!d) return '';
+  // Power BI can return dates as: "/Date(1234567890000)/" or "2025-01-15T00:00:00" or "2025-01-15"
   const s = d.toString();
-  // Handle ISO date strings like "2025-01-15T00:00:00" or "2025-01-15"
+  // Handle /Date(ms)/ format
+  const msMatch = s.match(/\/Date\((\d+)\)\//);
+  if(msMatch) {
+    const dt = new Date(parseInt(msMatch[1]));
+    return dt.getFullYear()+'-'+(dt.getMonth()+1).toString().padStart(2,'0');
+  }
+  // Handle ISO / standard date string
   const match = s.match(/(\d{4})-(\d{2})/);
   if(match) return match[1]+'-'+match[2];
   return '';
