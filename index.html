@@ -585,6 +585,25 @@ async function loadData() {
 
     const modelId = model.id;
 
+    // Step 3b: Discover columns (diagnostic)
+    setLoad(45, 'Discovering table schema...');
+    const diagResult = await executeQuery(token, wsId, modelId, `
+      EVALUATE
+      TOPN(2, 'Shopify_Orders_Headers_New')
+    `);
+    const diagRows = diagResult?.results?.[0]?.tables?.[0]?.rows || [];
+    if(diagRows.length > 0) {
+      console.log('Shopify_Orders_Headers_New columns:', Object.keys(diagRows[0]));
+    }
+    const diagLines = await executeQuery(token, wsId, modelId, `
+      EVALUATE
+      TOPN(2, 'Shopify_Orders_Lines')
+    `);
+    const diagLinesRows = diagLines?.results?.[0]?.tables?.[0]?.rows || [];
+    if(diagLinesRows.length > 0) {
+      console.log('Shopify_Orders_Lines columns:', Object.keys(diagLinesRows[0]));
+    }
+
     // Step 4: Query data
     setLoad(55, 'Querying Shopify orders...');
     await loadShopifyData(token, wsId, modelId);
@@ -614,13 +633,13 @@ async function loadData() {
 
 // ─── SHOPIFY DATA ─────────────────────────────────────────────────────────
 async function loadShopifyData(token, wsId, modelId) {
-  // Revenue by month
+  // Revenue by month - from Lines table only (has Sales Channel and Price, joined via Order ID)
   const revByMonth = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      "Month", FORMAT('Shopify_Orders_Headers_New'[Date Ordered], "YYYY-MM"),
+      'Shopify_Orders_Lines'[Order Date],
       "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price]),
-      "Orders", DISTINCTCOUNT('Shopify_Orders_Headers_New'[Order ID])
+      "Orders", DISTINCTCOUNT('Shopify_Orders_Lines'[Order ID])
     )
   `);
 
@@ -686,7 +705,7 @@ async function loadAmazonData(token, wsId, modelId) {
   const ukByMonth = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      "Month", FORMAT('Amazon_UK_Orders'[Order Date], "YYYY-MM"),
+      'Amazon_UK_Orders'[Order Date],
       "Revenue", SUM('Amazon_UK_Orders'[Revenue]),
       "Units", SUM('Amazon_UK_Orders'[Units Ordered]),
       "Sessions", SUM('Amazon_UK_Orders'[Sessions])
@@ -696,7 +715,7 @@ async function loadAmazonData(token, wsId, modelId) {
   const usByMonth = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      "Month", FORMAT('Amazon_US_Orders'[Order Date], "YYYY-MM"),
+      'Amazon_US_Orders'[Order Date],
       "Revenue", SUM('Amazon_US_Orders'[Revenue]),
       "Units", SUM('Amazon_US_Orders'[Units Ordered])
     )
@@ -705,7 +724,7 @@ async function loadAmazonData(token, wsId, modelId) {
   const euByMonth = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      "Month", FORMAT('Amazon EU Orders'[Order Date], "YYYY-MM"),
+      'Amazon EU Orders'[Order Date],
       "Revenue", SUM('Amazon EU Orders'[Revenue]),
       "Units", SUM('Amazon EU Orders'[Units Ordered])
     )
@@ -1110,13 +1129,23 @@ function selectMonth(month) {
 function getMonthLabels() {
   const set = new Set();
   [...(allData.shopifyRevByMonth||[]), ...(allData.amazonUK||[])].forEach(r=>{
-    const d = r['Month']||'';
-    if(d) set.add(d.substring(0,7));
+    const d = r['Month'] || r['Date Ordered'] || r['Order Date'] || '';
+    const ym = toYM(d);
+    if(ym) set.add(ym);
   });
   return [...set].sort().map(ym=>{
     const [y,m]=ym.split('-');
     return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]+' '+y;
   });
+}
+
+function toYM(d) {
+  if(!d) return '';
+  const s = d.toString();
+  // Handle ISO date strings like "2025-01-15T00:00:00" or "2025-01-15"
+  const match = s.match(/(\d{4})-(\d{2})/);
+  if(match) return match[1]+'-'+match[2];
+  return '';
 }
 
 function toYearMonth(label) {
@@ -1129,8 +1158,8 @@ function aggregateByMonth(rows, dateGetter, valGetter) {
   const out={};
   rows.forEach(r=>{
     const d=dateGetter(r);
-    if(!d) return;
-    const ym=d.substring(0,7);
+    const ym = toYM(d);
+    if(!ym) return;
     const [y,m]=ym.split('-');
     const label=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]+' '+y;
     out[label]=(out[label]||0)+valGetter(r);
