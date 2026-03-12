@@ -633,13 +633,13 @@ async function loadData() {
 
 // ─── SHOPIFY DATA ─────────────────────────────────────────────────────────
 async function loadShopifyData(token, wsId, modelId) {
-  // Revenue by month - from Lines table only (has Sales Channel and Price, joined via Order ID)
+  // Revenue by month - use Headers table only (has date + revenue)
   const revByMonth = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      'Shopify_Orders_Lines'[Order Date],
-      "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price]),
-      "Orders", DISTINCTCOUNT('Shopify_Orders_Lines'[Order ID])
+      'Shopify_Orders_Headers_New'[Date Ordered],
+      "Revenue", SUM('Shopify_Orders_Headers_New'[Order Total Revenue]),
+      "Orders", DISTINCTCOUNT('Shopify_Orders_Headers_New'[Order ID])
     )
   `);
 
@@ -647,13 +647,13 @@ async function loadShopifyData(token, wsId, modelId) {
   const revByChannel = await executeQuery(token, wsId, modelId, `
     EVALUATE
     SUMMARIZECOLUMNS(
-      'Shopify_Orders_Lines'[Sales Channel],
-      "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price]),
-      "Units", SUM('Shopify_Orders_Lines'[Units Ordered])
+      'Shopify_Orders_Headers_New'[Sales Channel],
+      "Revenue", SUM('Shopify_Orders_Headers_New'[Order Total Revenue]),
+      "Units", SUM('Shopify_Orders_Headers_New'[Units Ordered])
     )
   `);
 
-  // Top products
+  // Top products - from Lines table
   const topProducts = await executeQuery(token, wsId, modelId, `
     EVALUATE
     TOPN(10,
@@ -666,7 +666,7 @@ async function loadShopifyData(token, wsId, modelId) {
     )
   `);
 
-  // Recent orders
+  // Recent orders - from Headers
   const recentOrders = await executeQuery(token, wsId, modelId, `
     EVALUATE
     TOPN(50,
@@ -675,13 +675,14 @@ async function loadShopifyData(token, wsId, modelId) {
         "OrderNum", 'Shopify_Orders_Headers_New'[Order Number],
         "Date", 'Shopify_Orders_Headers_New'[Date Ordered],
         "Channel", 'Shopify_Orders_Headers_New'[Sales Channel],
-        "Cancelled", 'Shopify_Orders_Headers_New'[Order Cancelled Date]
+        "Revenue", 'Shopify_Orders_Headers_New'[Order Total Revenue],
+        "Status", 'Shopify_Orders_Headers_New'[Order Status]
       ),
       [Date], DESC
     )
   `);
 
-  // SKU revenue
+  // SKU revenue - from Lines
   const skuRev = await executeQuery(token, wsId, modelId, `
     EVALUATE
     TOPN(10,
@@ -1079,10 +1080,10 @@ function selectMonth(month) {
   document.getElementById('monthChartTitle').textContent = month+' — Revenue by Channel';
   document.getElementById('monthTableTitle').textContent = month+' — Detailed Breakdown';
 
-  const shopifyRev = (allData.shopifyRevByMonth||[]).find(r=>(r['Month']||'').substring(0,7)===month.replace(' ','').substring(0,7));
-  const amzUK = (allData.amazonUK||[]).find(r=>(r['Month']||'').substring(0,7)===toYearMonth(month));
-  const amzUS = (allData.amazonUS||[]).find(r=>(r['Month']||'').substring(0,7)===toYearMonth(month));
-  const amzEU = (allData.amazonEU||[]).find(r=>(r['Month']||'').substring(0,7)===toYearMonth(month));
+  const shopifyRev = (allData.shopifyRevByMonth||[]).find(r=>(r['Date Ordered']||r['Order Date']||r['Month']||'').substring(0,7)===month.replace(' ','').substring(0,7));
+  const amzUK = (allData.amazonUK||[]).find(r=>(r['Date Ordered']||r['Order Date']||r['Month']||'').substring(0,7)===toYearMonth(month));
+  const amzUS = (allData.amazonUS||[]).find(r=>(r['Date Ordered']||r['Order Date']||r['Month']||'').substring(0,7)===toYearMonth(month));
+  const amzEU = (allData.amazonEU||[]).find(r=>(r['Date Ordered']||r['Order Date']||r['Month']||'').substring(0,7)===toYearMonth(month));
 
   const revData = [
     {label:'Shopify', rev:shopifyRev?.Revenue||0, orders:shopifyRev?.Orders||0},
