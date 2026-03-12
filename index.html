@@ -1,1 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>doddl — Live Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #6ee7b7;
+    --accent2: #818cf8;
+    --accent3: #fb923c;
+    --accent4: #f472b6;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --uk: #6ee7b7;
+    --na: #818cf8;
+    --eu: #fb923c;
+    --positive: #4ade80;
+    --negative: #f87171;
+    --warning: #fbbf24;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
 
+  /* ── LOADING SCREEN ── */
+  #loadingScreen {
+    position:fixed; inset:0; background:var(--bg); z-index:1000;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px;
+  }
+  .loading-logo { font-size:48px; font-weight:700; letter-spacing:-2px; color:var(--accent); }
+  .loading-status { font-size:13px; color:var(--text-muted); font-family:'DM Mono',monospace; }
+  .loading-bar { width:280px; height:2px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .loading-bar-fill { height:100%; background:var(--accent); border-radius:2px; width:0%; transition:width 0.4s ease; }
+  .loading-step { font-size:11px; color:var(--text-muted); margin-top:4px; }
+
+  /* ── ERROR SCREEN ── */
+  #errorScreen {
+    position:fixed; inset:0; background:var(--bg); z-index:999;
+    display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:40px;
+  }
+  .error-title { font-size:20px; font-weight:600; color:var(--negative); }
+  .error-msg { font-size:13px; color:var(--text-dim); text-align:center; max-width:500px; line-height:1.6; font-family:'DM Mono',monospace; }
+  .error-retry { padding:10px 24px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); cursor:pointer; font-size:13px; font-family:'DM Sans',sans-serif; }
+  .error-retry:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── HEADER ── */
+  .header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 32px; border-bottom:1px solid var(--border);
+    background:var(--surface); position:sticky; top:0; z-index:100;
+  }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-mark { width:34px; height:34px; background:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--bg); font-size:15px; }
+  .logo-name { font-size:17px; font-weight:600; letter-spacing:-0.5px; }
+  .logo-sub { font-size:11px; color:var(--text-muted); }
+  .header-right { display:flex; align-items:center; gap:16px; }
+  .live-badge { display:flex; align-items:center; gap:6px; background:rgba(74,222,128,0.1); border:1px solid rgba(74,222,128,0.2); padding:5px 12px; border-radius:20px; font-size:11px; color:var(--positive); }
+  .live-badge::before { content:''; width:6px; height:6px; background:var(--positive); border-radius:50%; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .last-refresh { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; }
+  .refresh-btn { padding:6px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+  .refresh-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── NAV ── */
+  .nav { display:flex; gap:4px; padding:14px 32px 0; border-bottom:1px solid var(--border); background:var(--surface); }
+  .nav-tab { padding:9px 16px; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; border-radius:6px 6px 0 0; border:1px solid transparent; border-bottom:none; transition:all 0.15s; position:relative; bottom:-1px; }
+  .nav-tab:hover { color:var(--text-dim); }
+  .nav-tab.active { color:var(--text); background:var(--bg); border-color:var(--border); border-bottom-color:var(--bg); }
+
+  /* ── MAIN ── */
+  .main { padding:24px 32px; max-width:1600px; margin:0 auto; }
+  .page { display:none; }
+  .page.active { display:block; }
+
+  /* ── KPI ROW ── */
+  .kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px; }
+  .kpi-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; position:relative; overflow:hidden; transition:border-color 0.2s; }
+  .kpi-card:hover { border-color:#3a3a50; }
+  .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+  .kpi-card.c1::before{background:var(--accent)} .kpi-card.c2::before{background:var(--accent2)} .kpi-card.c3::before{background:var(--accent3)} .kpi-card.c4::before{background:var(--accent4)} .kpi-card.c5::before{background:#38bdf8} .kpi-card.c6::before{background:var(--warning)}
+  .kpi-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; margin-bottom:7px; }
+  .kpi-value { font-size:22px; font-weight:700; letter-spacing:-1px; font-family:'DM Mono',monospace; }
+  .kpi-value.loading-val { color:var(--border); animation:shimmer 1.5s infinite; }
+  @keyframes shimmer { 0%,100%{opacity:0.4} 50%{opacity:1} }
+  .kpi-sub { font-size:11px; color:var(--text-muted); margin-top:3px; }
+  .kpi-change { font-size:11px; margin-top:5px; font-weight:500; }
+  .kpi-change.up{color:var(--positive)} .kpi-change.down{color:var(--negative)} .kpi-change.neutral{color:var(--text-muted)}
+
+  /* ── CHARTS ── */
+  .charts-grid { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
+  .charts-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+  .charts-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .chart-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; }
+  .chart-title { font-size:13px; font-weight:600; margin-bottom:2px; }
+  .chart-subtitle { font-size:11px; color:var(--text-muted); }
+  .chart-legend { display:flex; gap:12px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-dim); }
+  .legend-dot { width:8px; height:8px; border-radius:2px; }
+  .chart-wrap { position:relative; }
+  .chart-wrap.h280 { height:280px; }
+  .chart-wrap.h220 { height:220px; }
+  .chart-wrap.h180 { height:180px; }
+
+  /* ── TABLE ── */
+  .data-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .data-table th { text-align:left; padding:10px 12px; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); font-weight:600; border-bottom:1px solid var(--border); white-space:nowrap; }
+  .data-table td { padding:10px 12px; border-bottom:1px solid #1e1e2a; color:var(--text-dim); font-family:'DM Mono',monospace; font-size:12px; white-space:nowrap; }
+  .data-table tr:hover td { background:var(--surface2); }
+  .data-table td.label { font-family:'DM Sans',sans-serif; font-weight:500; color:var(--text); }
+  .pill { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+  .pill-uk{background:rgba(110,231,183,0.15);color:var(--uk)} .pill-na{background:rgba(129,140,248,0.15);color:var(--na)} .pill-eu{background:rgba(251,146,60,0.15);color:var(--eu)}
+
+  /* ── MONTH SELECTOR ── */
+  .month-selector { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; }
+  .month-btn { padding:5px 12px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+  .month-btn:hover { border-color:#3a3a50; color:var(--text-dim); }
+  .month-btn.active { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:600; }
+
+  /* ── INSIGHTS ── */
+  .insight-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+  .insight-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .insight-flag { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .flag-dot { width:6px; height:6px; border-radius:50%; }
+  .insight-text { font-size:12px; color:var(--text-dim); line-height:1.6; }
+  .insight-text strong { color:var(--text); }
+
+  /* ── SECTION LABEL ── */
+  .section-label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; }
+
+  /* ── DATA NOTICE ── */
+  .data-notice { display:flex; align-items:center; gap:8px; background:rgba(129,140,248,0.08); border:1px solid rgba(129,140,248,0.2); border-radius:8px; padding:10px 16px; font-size:12px; color:var(--text-dim); margin-bottom:20px; }
+  .data-notice span { color:var(--accent2); font-weight:600; }
+
+  @media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loadingScreen">
+  <div class="loading-logo">doddl</div>
+  <div class="loading-status">Connecting to Fabric...</div>
+  <div class="loading-bar"><div class="loading-bar-fill" id="loadBar"></div></div>
+  <div class="loading-step" id="loadStep">Authenticating with Azure AD</div>
+</div>
+
+<!-- Error Screen -->
+<div id="errorScreen">
+  <div class="error-title">Connection Failed</div>
+  <div class="error-msg" id="errorMsg">Unable to connect to Fabric.</div>
+  <button class="error-retry" onclick="location.reload()">Retry</button>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" style="display:none">
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark">d</div>
+      <div>
+        <div class="logo-name">doddl</div>
+        <div class="logo-sub">Live Performance Dashboard</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="last-refresh" id="lastRefresh">—</span>
+      <span class="live-badge">Live · Fabric</span>
+      <button class="refresh-btn" onclick="refreshData()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="nav-tab active" onclick="switchTab('overview',this)">Overview</div>
+    <div class="nav-tab" onclick="switchTab('channels',this)">Channels</div>
+    <div class="nav-tab" onclick="switchTab('marketing',this)">Marketing</div>
+    <div class="nav-tab" onclick="switchTab('monthly',this)">Monthly Detail</div>
+    <div class="nav-tab" onclick="switchTab('orders',this)">Orders</div>
+  </div>
+
+  <div class="main">
+
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <div class="data-notice">
+        <span>Live</span> — data pulled directly from Doddl_Lakehouse_LIVE_WINSDOR · Last refreshed: <span id="overviewRefreshTime">—</span>
+      </div>
+      <div class="kpi-row" id="overviewKpis">
+        <div class="kpi-card c1"><div class="kpi-label">Total Revenue</div><div class="kpi-value loading-val" id="kpi-revenue">—</div><div class="kpi-sub" id="kpi-revenue-sub">Loading...</div></div>
+        <div class="kpi-card c2"><div class="kpi-label">Total Orders</div><div class="kpi-value loading-val" id="kpi-orders">—</div><div class="kpi-sub" id="kpi-orders-sub">Loading...</div></div>
+        <div class="kpi-card c3"><div class="kpi-label">Avg Order Value</div><div class="kpi-value loading-val" id="kpi-aov">—</div><div class="kpi-sub" id="kpi-aov-sub">Loading...</div></div>
+        <div class="kpi-card c4"><div class="kpi-label">Shopify Revenue</div><div class="kpi-value loading-val" id="kpi-shopify">—</div><div class="kpi-sub" id="kpi-shopify-sub">Loading...</div></div>
+        <div class="kpi-card c5"><div class="kpi-label">Amazon Revenue</div><div class="kpi-value loading-val" id="kpi-amazon">—</div><div class="kpi-sub" id="kpi-amazon-sub">Loading...</div></div>
+        <div class="kpi-card c6"><div class="kpi-label">Data Through</div><div class="kpi-value loading-val" id="kpi-date">—</div><div class="kpi-sub" id="kpi-date-sub">Latest order date</div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">Revenue by Month</div><div class="chart-subtitle">All channels combined</div></div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Shopify</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Amazon UK</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Amazon US</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent4)"></div>Amazon EU</div>
+            </div>
+          </div>
+          <div class="chart-wrap h280"><canvas id="revenueByMonthChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Revenue by Channel</div><div class="chart-subtitle">Total split</div></div></div>
+          <div class="chart-wrap h280"><canvas id="channelSplitChart"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-grid-3">
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Orders by Month</div><div class="chart-subtitle">All channels</div></div></div>
+          <div class="chart-wrap h180"><canvas id="ordersByMonthChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">AOV by Channel</div><div class="chart-subtitle">Average order value £</div></div></div>
+          <div class="chart-wrap h180"><canvas id="aovByChannelChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Top Products by Revenue</div><div class="chart-subtitle">Shopify — all time</div></div></div>
+          <div class="chart-wrap h180"><canvas id="topProductsChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANNELS -->
+    <div class="page" id="page-channels">
+      <div class="kpi-row">
+        <div class="kpi-card c1"><div class="kpi-label">Shopify Revenue</div><div class="kpi-value loading-val" id="ch-shopify-rev">—</div><div class="kpi-sub" id="ch-shopify-orders">— orders</div></div>
+        <div class="kpi-card c2"><div class="kpi-label">Shopify AOV</div><div class="kpi-value loading-val" id="ch-shopify-aov">—</div><div class="kpi-sub">Average order value</div></div>
+        <div class="kpi-card c3"><div class="kpi-label">Amazon UK Rev</div><div class="kpi-value loading-val" id="ch-amzuk-rev">—</div><div class="kpi-sub" id="ch-amzuk-units">— units</div></div>
+        <div class="kpi-card c4"><div class="kpi-label">Amazon US Rev</div><div class="kpi-value loading-val" id="ch-amzus-rev">—</div><div class="kpi-sub" id="ch-amzus-units">— units</div></div>
+        <div class="kpi-card c5"><div class="kpi-label">Amazon EU Rev</div><div class="kpi-value loading-val" id="ch-amzeu-rev">—</div><div class="kpi-sub" id="ch-amzeu-units">— units</div></div>
+        <div class="kpi-card c6"><div class="kpi-label">Amazon Conv Rate</div><div class="kpi-value loading-val" id="ch-cvr">—</div><div class="kpi-sub">Avg across markets</div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Amazon Revenue by Market — Monthly</div><div class="chart-subtitle">UK vs US vs EU</div></div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>UK</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>US</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent4)"></div>EU</div>
+            </div>
+          </div>
+          <div class="chart-wrap h280"><canvas id="amazonByMarketChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Shopify Revenue by Sales Channel</div><div class="chart-subtitle">Where Shopify orders come from</div></div></div>
+          <div class="chart-wrap h280"><canvas id="shopifyChannelChart"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-grid-2">
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Amazon Units by Market</div><div class="chart-subtitle">Monthly unit sales</div></div></div>
+          <div class="chart-wrap h220"><canvas id="amazonUnitsChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Amazon Conversion Rate</div><div class="chart-subtitle">Session to purchase %</div></div></div>
+          <div class="chart-wrap h220"><canvas id="amazonCvrChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARKETING -->
+    <div class="page" id="page-marketing">
+      <div class="data-notice">
+        <span>Note</span> — Ad data from Google Ads campaigns. Meta data coming once cleaned.
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-card c1"><div class="kpi-label">Total Impressions</div><div class="kpi-value loading-val" id="mkt-impressions">—</div><div class="kpi-sub">Google Ads</div></div>
+        <div class="kpi-card c2"><div class="kpi-label">Total Clicks</div><div class="kpi-value loading-val" id="mkt-clicks">—</div><div class="kpi-sub">Google Ads</div></div>
+        <div class="kpi-card c3"><div class="kpi-label">Total Spend</div><div class="kpi-value loading-val" id="mkt-spend">—</div><div class="kpi-sub">Google Ads</div></div>
+        <div class="kpi-card c4"><div class="kpi-label">Avg CTR</div><div class="kpi-value loading-val" id="mkt-ctr">—</div><div class="kpi-sub">Click through rate</div></div>
+        <div class="kpi-card c5"><div class="kpi-label">Avg CPC</div><div class="kpi-value loading-val" id="mkt-cpc">—</div><div class="kpi-sub">Cost per click</div></div>
+        <div class="kpi-card c6"><div class="kpi-label">Conversions</div><div class="kpi-value loading-val" id="mkt-conv">—</div><div class="kpi-sub">Google Ads</div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Spend & Impressions Over Time</div><div class="chart-subtitle">Google Ads campaign performance</div></div></div>
+          <div class="chart-wrap h280"><canvas id="spendImpressionsChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Top Campaigns by Spend</div><div class="chart-subtitle">All time</div></div></div>
+          <div class="chart-wrap h280"><canvas id="topCampaignsChart"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-grid-2">
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">CTR Trend</div><div class="chart-subtitle">Click through rate over time</div></div></div>
+          <div class="chart-wrap h220"><canvas id="ctrChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">CPC Trend</div><div class="chart-subtitle">Cost per click over time</div></div></div>
+          <div class="chart-wrap h220"><canvas id="cpcChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONTHLY DETAIL -->
+    <div class="page" id="page-monthly">
+      <div class="section-label">Select Month</div>
+      <div class="month-selector" id="monthSelector"></div>
+      <div class="charts-grid-2" style="margin-bottom:16px">
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title" id="monthChartTitle">Monthly Revenue</div><div class="chart-subtitle">By channel</div></div></div>
+          <div class="chart-wrap h220"><canvas id="monthRevenueChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Orders by Channel</div><div class="chart-subtitle">Selected month</div></div></div>
+          <div class="chart-wrap h220"><canvas id="monthOrdersChart"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title" id="monthTableTitle">Detailed Breakdown</div></div></div>
+        <table class="data-table">
+          <thead><tr>
+            <th>Channel</th><th>Revenue</th><th>Orders / Units</th><th>AOV / ASP</th><th>Sessions</th><th>Conv Rate</th>
+          </tr></thead>
+          <tbody id="monthTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">Select a month above</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="page" id="page-orders">
+      <div class="kpi-row">
+        <div class="kpi-card c1"><div class="kpi-label">Total Shopify Orders</div><div class="kpi-value loading-val" id="ord-total">—</div><div class="kpi-sub" id="ord-total-sub">All time</div></div>
+        <div class="kpi-card c2"><div class="kpi-label">Avg Daily Orders</div><div class="kpi-value loading-val" id="ord-daily">—</div><div class="kpi-sub">Shopify</div></div>
+        <div class="kpi-card c3"><div class="kpi-label">Total Revenue</div><div class="kpi-value loading-val" id="ord-rev">—</div><div class="kpi-sub">Shopify order lines</div></div>
+        <div class="kpi-card c4"><div class="kpi-label">Top SKU</div><div class="kpi-value loading-val" id="ord-topsku" style="font-size:14px">—</div><div class="kpi-sub">By revenue</div></div>
+        <div class="kpi-card c5"><div class="kpi-label">Unique Products</div><div class="kpi-value loading-val" id="ord-products">—</div><div class="kpi-sub">Distinct SKUs sold</div></div>
+        <div class="kpi-card c6"><div class="kpi-label">Cancellation Rate</div><div class="kpi-value loading-val" id="ord-cancel">—</div><div class="kpi-sub">% orders cancelled</div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Shopify Orders Over Time</div><div class="chart-subtitle">Daily order count</div></div></div>
+          <div class="chart-wrap h280"><canvas id="ordersOverTimeChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Revenue by SKU</div><div class="chart-subtitle">Top 10 products</div></div></div>
+          <div class="chart-wrap h280"><canvas id="skuRevenueChart"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div><div class="chart-title">Recent Orders</div><div class="chart-subtitle">Last 50 Shopify orders</div></div></div>
+        <table class="data-table">
+          <thead><tr><th>Order #</th><th>Date</th><th>Channel</th><th>Revenue</th><th>Status</th></tr></thead>
+          <tbody id="recentOrdersBody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /dashboard -->
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const CONFIG = {
+  tenantId:     '927d1e2c-7c8d-406f-8640-678dfce86b7d',
+  clientId:     '42c64061-ba34-4109-8aa8-ae4f55c62f9f',
+  clientSecret: 'JDs8Q~.B73kDUZpHirS4m045hDIEcpedbH4kSbGJ',
+  sqlEndpoint:  'fqph3eunprxubbsam6g7z2dlpu-zlz2sij3dwoeffepjfq4coqe4m.datawarehouse.fabric.microsoft.com',
+  database:     'Doddl_Lakehouse_LIVE_WINSDOR',
+  scope:        'https://analysis.windows.net/powerbi/api/.default'
+};
+
+// ─── CHART DEFAULTS ────────────────────────────────────────────────────────
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = 'DM Sans';
+Chart.defaults.font.size = 11;
+const G = 'rgba(42,42,58,0.8)';
+const T = '#475569';
+const charts = {};
+
+function baseOpts(extra={}) {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#1a1a24',borderColor:'#2a2a3a',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#94a3b8',padding:10} },
+    scales:{ x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T}} },
+    ...extra
+  };
+}
+
+function fmtCurr(v, sym='£') {
+  if(v>=1000000) return sym+(v/1000000).toFixed(2)+'M';
+  if(v>=1000) return sym+(v/1000).toFixed(1)+'K';
+  return sym+v.toFixed(0);
+}
+function fmtNum(v) {
+  if(v>=1000000) return (v/1000000).toFixed(1)+'M';
+  if(v>=1000) return (v/1000).toFixed(1)+'K';
+  return Math.round(v).toString();
+}
+function setKpi(id, val, loading=false) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.textContent = val;
+  el.classList.toggle('loading-val', loading);
+}
+
+// ─── LOADING UI ────────────────────────────────────────────────────────────
+function setLoad(pct, msg) {
+  document.getElementById('loadBar').style.width = pct+'%';
+  document.getElementById('loadStep').textContent = msg;
+  document.querySelector('#loadingScreen .loading-status').textContent = pct < 100 ? 'Connecting to Fabric...' : 'Loading dashboard...';
+}
+function showError(msg) {
+  document.getElementById('loadingScreen').style.display='none';
+  const es = document.getElementById('errorScreen');
+  es.style.display='flex';
+  document.getElementById('errorMsg').textContent = msg;
+}
+
+// ─── AUTH: Get token via CORS proxy workaround ─────────────────────────────
+// Since client_credentials flow requires a backend, we use the Fabric REST API
+// via a thin proxy call. The token fetch hits the Azure token endpoint directly.
+async function getToken() {
+  const url = `https://login.microsoftonline.com/${CONFIG.tenantId}/oauth2/v2.0/token`;
+  const body = new URLSearchParams({
+    grant_type:    'client_credentials',
+    client_id:     CONFIG.clientId,
+    client_secret: CONFIG.clientSecret,
+    scope:         CONFIG.scope
+  });
+  const resp = await fetch(url, { method:'POST', body, headers:{'Content-Type':'application/x-www-form-urlencoded'} });
+  if(!resp.ok) {
+    const err = await resp.json();
+    throw new Error(err.error_description || 'Auth failed');
+  }
+  const data = await resp.json();
+  return data.access_token;
+}
+
+// ─── QUERY FABRIC via REST API ────────────────────────────────────────────
+// Fabric SQL analytics endpoint supports REST queries via the executeQuery API
+async function queryFabric(token, sql) {
+  // Use Power BI / Fabric executeQuery REST endpoint
+  const workspaceId = await getWorkspaceId(token);
+  const lakehouseId = await getLakehouseId(token, workspaceId);
+
+  const url = `https://api.fabric.microsoft.com/v1/workspaces/${workspaceId}/lakehouses/${lakehouseId}/tables`;
+  // Fall back to direct SQL endpoint via Fabric SQL REST API
+  return await queryViaSqlEndpoint(token, sql);
+}
+
+async function queryViaSqlEndpoint(token, sql) {
+  // Fabric SQL endpoint REST query API
+  const endpoint = `https://${CONFIG.sqlEndpoint}`;
+  const url = `https://api.fabric.microsoft.com/v1/lakehouse/query`;
+
+  // Use the executeQuery approach via the datawarehouse REST API
+  const resp = await fetch(`https://${CONFIG.sqlEndpoint}/query`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query: sql })
+  });
+
+  if(!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`Query failed: ${resp.status} — ${txt.substring(0,200)}`);
+  }
+  return await resp.json();
+}
+
+async function getWorkspaceId(token) {
+  const resp = await fetch('https://api.fabric.microsoft.com/v1/workspaces', {
+    headers:{ 'Authorization':'Bearer '+token }
+  });
+  if(!resp.ok) throw new Error('Could not list workspaces: '+resp.status);
+  const data = await resp.json();
+  const ws = data.value?.find(w => w.displayName === 'Doddl_Workspace');
+  if(!ws) throw new Error('Doddl_Workspace not found. Check service principal has Viewer access.');
+  return ws.id;
+}
+
+async function getLakehouseId(token, workspaceId) {
+  const resp = await fetch(`https://api.fabric.microsoft.com/v1/workspaces/${workspaceId}/lakehouses`, {
+    headers:{ 'Authorization':'Bearer '+token }
+  });
+  if(!resp.ok) throw new Error('Could not list lakehouses: '+resp.status);
+  const data = await resp.json();
+  const lh = data.value?.find(l => l.displayName === 'Doddl_Lakehouse_LIVE_WINSDOR');
+  if(!lh) throw new Error('Lakehouse not found');
+  return lh.id;
+}
+
+// ─── POWER BI REST EXECUTE QUERIES (works with Fabric semantic model) ──────
+async function executeQuery(token, workspaceId, datasetId, dax) {
+  const resp = await fetch(`https://api.powerbi.com/v1.0/myorg/groups/${workspaceId}/datasets/${datasetId}/executeQueries`, {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+    body: JSON.stringify({ queries:[{query:dax}], serializerSettings:{includeNulls:true} })
+  });
+  if(!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`ExecuteQuery failed ${resp.status}: ${txt.substring(0,300)}`);
+  }
+  return await resp.json();
+}
+
+// ─── MAIN DATA LOAD ────────────────────────────────────────────────────────
+let token = null;
+let wsId = null;
+let allData = {};
+
+async function loadData() {
+  try {
+    // Step 1: Auth
+    setLoad(10, 'Authenticating with Azure AD...');
+    token = await getToken();
+
+    // Step 2: Find workspace
+    setLoad(25, 'Finding Doddl workspace...');
+    wsId = await getWorkspaceId(token);
+
+    // Step 3: Find semantic model (Doddl_Sales_Model)
+    setLoad(40, 'Connecting to Doddl_Sales_Model...');
+    const modelsResp = await fetch(`https://api.powerbi.com/v1.0/myorg/groups/${wsId}/datasets`, {
+      headers:{ 'Authorization':'Bearer '+token }
+    });
+    if(!modelsResp.ok) throw new Error('Cannot access datasets: '+modelsResp.status);
+    const models = await modelsResp.json();
+    const model = models.value?.find(m => m.name === 'Doddl_Sales_Model');
+    if(!model) throw new Error('Doddl_Sales_Model not found in workspace. Make sure the semantic model exists.');
+
+    const modelId = model.id;
+
+    // Step 4: Query data
+    setLoad(55, 'Querying Shopify orders...');
+    await loadShopifyData(token, wsId, modelId);
+
+    setLoad(70, 'Querying Amazon data...');
+    await loadAmazonData(token, wsId, modelId);
+
+    setLoad(82, 'Querying ad performance...');
+    await loadAdsData(token, wsId, modelId);
+
+    setLoad(95, 'Building charts...');
+    buildAllCharts();
+
+    setLoad(100, 'Done');
+    await new Promise(r=>setTimeout(r,400));
+
+    document.getElementById('loadingScreen').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    document.getElementById('lastRefresh').textContent = 'Refreshed '+new Date().toLocaleTimeString('en-GB');
+    document.getElementById('overviewRefreshTime').textContent = new Date().toLocaleString('en-GB');
+
+  } catch(err) {
+    console.error(err);
+    showError(err.message || String(err));
+  }
+}
+
+// ─── SHOPIFY DATA ─────────────────────────────────────────────────────────
+async function loadShopifyData(token, wsId, modelId) {
+  // Revenue by month
+  const revByMonth = await executeQuery(token, wsId, modelId, `
+    EVALUATE
+    SUMMARIZECOLUMNS(
+      DATESMTH('Shopify_Orders_Headers_New'[Date Ordered]),
+      "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price]),
+      "Orders", DISTINCTCOUNT('Shopify_Orders_Headers_New'[Order ID])
+    )
+  `);
+
+  // Revenue by sales channel
+  const revByChannel = await executeQuery(token, wsId, modelId, `
+    EVALUATE
+    SUMMARIZECOLUMNS(
+      'Shopify_Orders_Lines'[Sales Channel],
+      "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price]),
+      "Units", SUM('Shopify_Orders_Lines'[Units Ordered])
+    )
+  `);
+
+  // Top products
+  const topProducts = await executeQuery(token, wsId, modelId, `
+    EVALUATE
+    TOPN(10,
+      SUMMARIZECOLUMNS(
+        'Shopify_Orders_Lines'[Product Name],
+        "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price]),
+        "Units", SUM('Shopify_Orders_Lines'[Units Ordered])
+      ),
+      [Revenue], DESC
+    )
+  `);
+
+  // Recent orders
+  const recentOrders = await executeQuery(token, wsId, modelId, `
+    EVALUATE
+    TOPN(50,
+      SELECTCOLUMNS(
+        'Shopify_Orders_Headers_New',
+        "OrderNum", 'Shopify_Orders_Headers_New'[Order Number],
+        "Date", 'Shopify_Orders_Headers_New'[Date Ordered],
+        "Channel", 'Shopify_Orders_Headers_New'[Sales Channel],
+        "Cancelled", 'Shopify_Orders_Headers_New'[Order Cancelled Date]
+      ),
+      [Date], DESC
+    )
+  `);
+
+  // SKU revenue
+  const skuRev = await executeQuery(token, wsId, modelId, `
+    EVALUATE
+    TOPN(10,
+      SUMMARIZECOLUMNS(
+        'Shopify_Orders_Lines'[SKU],
+        "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price])
+      ),
+      [Revenue], DESC
+    )
+  `);
+
+  allData.shopifyRevByMonth = parseDAX(revByMonth);
+  allData.shopifyRevByChannel = parseDAX(revByChannel);
+  allData.shopifyTopProducts = parseDAX(topProducts);
+  allData.shopifyRecentOrders = parseDAX(recentOrders);
+  allData.shopifySkuRev = parseDAX(skuRev);
+}
+
+// ─── AMAZON DATA ──────────────────────────────────────────────────────────
+async function loadAmazonData(token, wsId, modelId) {
+  const ukByMonth = await executeQuery(token, wsId, modelId, `
+    EVALUATE
+    SUMMARIZECOLUMNS(
+      DATESMTH('Amazon_UK_Orders'[Order Date]),
+      "Revenue", SUM('Amazon_UK_Orders'[Revenue]),
+      "Units", SUM('Amazon_UK_Orders'[Units Ordered]),
+      "Sessions", SUM('Amazon_UK_Orders'[Sessions])
+    )
+  `);
+
+  const usByMonth = await executeQuery(token, wsId, modelId, `
+    EVALUATE
+    SUMMARIZECOLUMNS(
+      DATESMTH('Amazon_US_Orders'[Order Date]),
+      "Revenue", SUM('Amazon_US_Orders'[Revenue]),
+      "Units", SUM('Amazon_US_Orders'[Units Ordered])
+    )
+  `);
+
+  const euByMonth = await executeQuery(token, wsId, modelId, `
+    EVALUATE
+    SUMMARIZECOLUMNS(
+      DATESMTH('Amazon EU Orders'[Order Date]),
+      "Revenue", SUM('Amazon EU Orders'[Revenue]),
+      "Units", SUM('Amazon EU Orders'[Units Ordered])
+    )
+  `);
+
+  allData.amazonUK = parseDAX(ukByMonth);
+  allData.amazonUS = parseDAX(usByMonth);
+  allData.amazonEU = parseDAX(euByMonth);
+}
+
+// ─── ADS DATA ─────────────────────────────────────────────────────────────
+async function loadAdsData(token, wsId, modelId) {
+  try {
+    const googleCampaigns = await executeQuery(token, wsId, modelId, `
+      EVALUATE
+      SUMMARIZECOLUMNS(
+        'GoogleAds_Campaign'[Campaign],
+        "Impressions", SUM('GoogleAds_Campaign'[Impressions]),
+        "Clicks", SUM('GoogleAds_Campaign'[Clicks]),
+        "Spend", SUM('GoogleAds_Campaign'[Cost]),
+        "Conversions", SUM('GoogleAds_Campaign'[Conversions])
+      )
+    `);
+    allData.googleCampaigns = parseDAX(googleCampaigns);
+  } catch(e) {
+    allData.googleCampaigns = [];
+    console.warn('Ads data unavailable:', e.message);
+  }
+}
+
+// ─── PARSE DAX RESULT ─────────────────────────────────────────────────────
+function parseDAX(result) {
+  try {
+    const table = result?.results?.[0]?.tables?.[0];
+    if(!table) return [];
+    const rows = table.rows || [];
+    return rows.map(row => {
+      const out = {};
+      Object.keys(row).forEach(k => {
+        // Clean DAX column names like "[Revenue]" → "Revenue"
+        const clean = k.replace(/^\[|\]$/g,'').replace(/^.*\[/,'');
+        out[clean] = row[k];
+      });
+      return out;
+    });
+  } catch(e) {
+    console.warn('parseDAX error:', e);
+    return [];
+  }
+}
+
+// ─── BUILD ALL CHARTS ─────────────────────────────────────────────────────
+function buildAllCharts() {
+  buildOverviewCharts();
+  buildChannelCharts();
+  buildMarketingCharts();
+  buildOrdersCharts();
+  buildMonthSelector();
+}
+
+function buildOverviewCharts() {
+  // ── KPIs ──
+  const shopifyTotal = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const shopifyOrders = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Orders||0),0);
+  const amzUKTotal = (allData.amazonUK||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const amzUSTotal = (allData.amazonUS||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const amzEUTotal = (allData.amazonEU||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const totalRev = shopifyTotal + amzUKTotal + amzUSTotal + amzEUTotal;
+  const totalOrders = shopifyOrders;
+  const aov = shopifyOrders > 0 ? shopifyTotal/shopifyOrders : 0;
+
+  // Latest date
+  const allDates = [
+    ...(allData.shopifyRevByMonth||[]).map(r=>r['Date Ordered']||r['DATESMTH']||''),
+    ...(allData.amazonUK||[]).map(r=>r['Order Date']||'')
+  ].filter(Boolean).sort();
+  const latestDate = allDates[allDates.length-1];
+
+  setKpi('kpi-revenue', fmtCurr(totalRev));
+  setKpi('kpi-revenue-sub', 'All channels combined');
+  setKpi('kpi-orders', fmtNum(totalOrders));
+  setKpi('kpi-orders-sub', 'Shopify orders');
+  setKpi('kpi-aov', fmtCurr(aov));
+  setKpi('kpi-aov-sub', 'Shopify avg order value');
+  setKpi('kpi-shopify', fmtCurr(shopifyTotal));
+  setKpi('kpi-shopify-sub', fmtNum(shopifyOrders)+' orders');
+  setKpi('kpi-amazon', fmtCurr(amzUKTotal+amzUSTotal+amzEUTotal));
+  setKpi('kpi-amazon-sub', 'UK + US + EU combined');
+  setKpi('kpi-date', latestDate ? latestDate.substring(0,10) : 'N/A');
+
+  // ── Revenue by Month chart ──
+  const months = getMonthLabels();
+  const shopifyByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>r['Date Ordered']||'', r=>r.Revenue||0);
+  const amzUKByM = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const amzUSByM = aggregateByMonth(allData.amazonUS||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const amzEUByM = aggregateByMonth(allData.amazonEU||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+
+  if(charts.revenueByMonth) charts.revenueByMonth.destroy();
+  charts.revenueByMonth = new Chart(document.getElementById('revenueByMonthChart'), {
+    type:'bar',
+    data:{
+      labels: months,
+      datasets:[
+        {label:'Shopify',   data:months.map(m=>shopifyByM[m]||0), backgroundColor:'rgba(110,231,183,0.8)', stack:'a', borderRadius:2},
+        {label:'Amazon UK', data:months.map(m=>amzUKByM[m]||0),  backgroundColor:'rgba(129,140,248,0.8)', stack:'a', borderRadius:2},
+        {label:'Amazon US', data:months.map(m=>amzUSByM[m]||0),  backgroundColor:'rgba(251,146,60,0.8)',  stack:'a', borderRadius:2},
+        {label:'Amazon EU', data:months.map(m=>amzEUByM[m]||0),  backgroundColor:'rgba(244,114,182,0.8)', stack:'a', borderRadius:2},
+      ]
+    },
+    options:{...baseOpts(), scales:{
+      x:{stacked:true,grid:{color:G},ticks:{color:T}},
+      y:{stacked:true,grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}
+    }}
+  });
+
+  // ── Channel split doughnut ──
+  if(charts.channelSplit) charts.channelSplit.destroy();
+  charts.channelSplit = new Chart(document.getElementById('channelSplitChart'), {
+    type:'doughnut',
+    data:{
+      labels:['Shopify','Amazon UK','Amazon US','Amazon EU'],
+      datasets:[{data:[shopifyTotal,amzUKTotal,amzUSTotal,amzEUTotal],
+        backgroundColor:['rgba(110,231,183,0.85)','rgba(129,140,248,0.85)','rgba(251,146,60,0.85)','rgba(244,114,182,0.85)'],
+        borderColor:'#0a0a0f', borderWidth:3}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#94a3b8',padding:14,font:{size:11}}},
+        tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmtCurr(ctx.raw)}}}}
+  });
+
+  // ── Orders by month ──
+  const ordersByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>r['Date Ordered']||'', r=>r.Orders||0);
+  if(charts.ordersByMonth) charts.ordersByMonth.destroy();
+  charts.ordersByMonth = new Chart(document.getElementById('ordersByMonthChart'), {
+    type:'bar',
+    data:{labels:months, datasets:[{data:months.map(m=>ordersByM[m]||0), backgroundColor:'rgba(129,140,248,0.7)', borderRadius:3}]},
+    options:baseOpts()
+  });
+
+  // ── AOV by channel ──
+  const channels = (allData.shopifyRevByChannel||[]).map(r=>r['Sales Channel']||r.Sales_Channel||'Unknown').filter(Boolean).slice(0,6);
+  const aovVals = (allData.shopifyRevByChannel||[]).slice(0,6).map(r=>{
+    const rev = r.Revenue||0; const units = r.Units||1;
+    return +(rev/units).toFixed(2);
+  });
+  if(charts.aovByChannel) charts.aovByChannel.destroy();
+  charts.aovByChannel = new Chart(document.getElementById('aovByChannelChart'), {
+    type:'bar',
+    data:{labels:channels, datasets:[{data:aovVals, backgroundColor:'rgba(251,146,60,0.75)', borderRadius:4}]},
+    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T,font:{size:10}}}, y:{grid:{color:G},ticks:{color:T,callback:v=>'£'+v.toFixed(0)}}}}
+  });
+
+  // ── Top products ──
+  const prods = (allData.shopifyTopProducts||[]).slice(0,8);
+  const prodLabels = prods.map(r=>(r['Product Name']||r.Product_Name||'?').substring(0,20));
+  const prodRevs = prods.map(r=>r.Revenue||0);
+  if(charts.topProducts) charts.topProducts.destroy();
+  charts.topProducts = new Chart(document.getElementById('topProductsChart'), {
+    type:'bar',
+    data:{labels:prodLabels, datasets:[{data:prodRevs, backgroundColor:'rgba(110,231,183,0.7)', borderRadius:4}]},
+    options:{...baseOpts(), indexAxis:'y', scales:{x:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}, y:{grid:{color:G},ticks:{color:T,font:{size:10}}}}}
+  });
+}
+
+function buildChannelCharts() {
+  const amzUKTotal = (allData.amazonUK||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const amzUSTotal = (allData.amazonUS||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const amzEUTotal = (allData.amazonEU||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const amzUKUnits = (allData.amazonUK||[]).reduce((s,r)=>s+(r.Units||0),0);
+  const amzUSUnits = (allData.amazonUS||[]).reduce((s,r)=>s+(r.Units||0),0);
+  const amzEUUnits = (allData.amazonEU||[]).reduce((s,r)=>s+(r.Units||0),0);
+  const shopifyTotal = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const shopifyOrders = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Orders||0),0);
+
+  setKpi('ch-shopify-rev', fmtCurr(shopifyTotal));
+  setKpi('ch-shopify-orders', fmtNum(shopifyOrders)+' orders');
+  setKpi('ch-shopify-aov', fmtCurr(shopifyOrders>0?shopifyTotal/shopifyOrders:0));
+  setKpi('ch-amzuk-rev', fmtCurr(amzUKTotal));
+  setKpi('ch-amzuk-units', fmtNum(amzUKUnits)+' units');
+  setKpi('ch-amzus-rev', fmtCurr(amzUSTotal));
+  setKpi('ch-amzus-units', fmtNum(amzUSUnits)+' units');
+  setKpi('ch-amzeu-rev', fmtCurr(amzEUTotal));
+  setKpi('ch-amzeu-units', fmtNum(amzEUUnits)+' units');
+
+  const months = getMonthLabels();
+  const ukByM = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const usByM = aggregateByMonth(allData.amazonUS||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const euByM = aggregateByMonth(allData.amazonEU||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+
+  if(charts.amazonByMarket) charts.amazonByMarket.destroy();
+  charts.amazonByMarket = new Chart(document.getElementById('amazonByMarketChart'), {
+    type:'bar',
+    data:{labels:months, datasets:[
+      {label:'UK', data:months.map(m=>ukByM[m]||0), backgroundColor:'rgba(129,140,248,0.8)', borderRadius:2},
+      {label:'US', data:months.map(m=>usByM[m]||0), backgroundColor:'rgba(251,146,60,0.8)', borderRadius:2},
+      {label:'EU', data:months.map(m=>euByM[m]||0), backgroundColor:'rgba(244,114,182,0.8)', borderRadius:2},
+    ]},
+    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}}}
+  });
+
+  // Shopify by channel
+  const chData = allData.shopifyRevByChannel||[];
+  if(charts.shopifyChannel) charts.shopifyChannel.destroy();
+  charts.shopifyChannel = new Chart(document.getElementById('shopifyChannelChart'), {
+    type:'doughnut',
+    data:{
+      labels: chData.map(r=>r['Sales Channel']||'Unknown'),
+      datasets:[{data:chData.map(r=>r.Revenue||0),
+        backgroundColor:['rgba(110,231,183,0.85)','rgba(129,140,248,0.85)','rgba(251,146,60,0.85)','rgba(244,114,182,0.85)','rgba(56,189,248,0.85)'],
+        borderColor:'#0a0a0f', borderWidth:3}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#94a3b8',padding:12,font:{size:11}}},
+               tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmtCurr(ctx.raw)}}}}
+  });
+
+  // Units by market
+  const ukUnitsByM = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Units||0);
+  const usUnitsByM = aggregateByMonth(allData.amazonUS||[], r=>r['Order Date']||'', r=>r.Units||0);
+  const euUnitsByM = aggregateByMonth(allData.amazonEU||[], r=>r['Order Date']||'', r=>r.Units||0);
+  if(charts.amazonUnits) charts.amazonUnits.destroy();
+  charts.amazonUnits = new Chart(document.getElementById('amazonUnitsChart'), {
+    type:'line',
+    data:{labels:months, datasets:[
+      {label:'UK',data:months.map(m=>ukUnitsByM[m]||0),borderColor:'#818cf8',fill:false,tension:0.4},
+      {label:'US',data:months.map(m=>usUnitsByM[m]||0),borderColor:'#fb923c',fill:false,tension:0.4},
+      {label:'EU',data:months.map(m=>euUnitsByM[m]||0),borderColor:'#f472b6',fill:false,tension:0.4},
+    ]},
+    options:baseOpts()
+  });
+
+  // CVR
+  const ukCvr = (allData.amazonUK||[]).filter(r=>r.Sessions>0).map(r=>((r.Units||0)/r.Sessions*100));
+  const avgCvr = ukCvr.length ? ukCvr.reduce((a,b)=>a+b,0)/ukCvr.length : 0;
+  setKpi('ch-cvr', avgCvr.toFixed(1)+'%');
+
+  if(charts.amazonCvr) charts.amazonCvr.destroy();
+  const ukSessions = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Sessions||0);
+  const ukCvrByM = aggregateByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Sessions>0?((r.Units||0)/r.Sessions*100):0);
+  charts.amazonCvr = new Chart(document.getElementById('amazonCvrChart'), {
+    type:'line',
+    data:{labels:months, datasets:[{label:'UK CVR %',data:months.map(m=>+(ukCvrByM[m]||0).toFixed(2)),borderColor:'#6ee7b7',backgroundColor:'rgba(110,231,183,0.1)',fill:true,tension:0.4}]},
+    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T,callback:v=>v.toFixed(1)+'%'}}}}
+  });
+}
+
+function buildMarketingCharts() {
+  const gc = allData.googleCampaigns||[];
+  if(gc.length===0) {
+    setKpi('mkt-impressions','N/A'); setKpi('mkt-clicks','N/A'); setKpi('mkt-spend','N/A');
+    setKpi('mkt-ctr','N/A'); setKpi('mkt-cpc','N/A'); setKpi('mkt-conv','N/A');
+    return;
+  }
+  const totalImpr = gc.reduce((s,r)=>s+(r.Impressions||0),0);
+  const totalClicks = gc.reduce((s,r)=>s+(r.Clicks||0),0);
+  const totalSpend = gc.reduce((s,r)=>s+(r.Spend||r.Cost||0),0);
+  const totalConv = gc.reduce((s,r)=>s+(r.Conversions||0),0);
+  const ctr = totalImpr>0?totalClicks/totalImpr*100:0;
+  const cpc = totalClicks>0?totalSpend/totalClicks:0;
+
+  setKpi('mkt-impressions', fmtNum(totalImpr));
+  setKpi('mkt-clicks', fmtNum(totalClicks));
+  setKpi('mkt-spend', fmtCurr(totalSpend));
+  setKpi('mkt-ctr', ctr.toFixed(2)+'%');
+  setKpi('mkt-cpc', fmtCurr(cpc));
+  setKpi('mkt-conv', fmtNum(totalConv));
+
+  const top8 = [...gc].sort((a,b)=>(b.Spend||0)-(a.Spend||0)).slice(0,8);
+  if(charts.topCampaigns) charts.topCampaigns.destroy();
+  charts.topCampaigns = new Chart(document.getElementById('topCampaignsChart'), {
+    type:'bar',
+    data:{
+      labels:top8.map(r=>(r.Campaign||'?').substring(0,22)),
+      datasets:[{data:top8.map(r=>r.Spend||r.Cost||0), backgroundColor:'rgba(251,146,60,0.75)', borderRadius:4}]
+    },
+    options:{...baseOpts(), indexAxis:'y', scales:{x:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}, y:{grid:{color:G},ticks:{color:T,font:{size:10}}}}}
+  });
+}
+
+function buildOrdersCharts() {
+  const orders = allData.shopifyRevByMonth||[];
+  const months = getMonthLabels();
+  const ordersByM = aggregateByMonth(orders, r=>r['Date Ordered']||'', r=>r.Orders||0);
+  const revByM = aggregateByMonth(orders, r=>r['Date Ordered']||'', r=>r.Revenue||0);
+
+  const totalOrders = orders.reduce((s,r)=>s+(r.Orders||0),0);
+  const totalRev = orders.reduce((s,r)=>s+(r.Revenue||0),0);
+  const days = months.length * 30;
+
+  setKpi('ord-total', fmtNum(totalOrders));
+  setKpi('ord-daily', (totalOrders/Math.max(days,1)).toFixed(0));
+  setKpi('ord-rev', fmtCurr(totalRev));
+
+  const skus = allData.shopifySkuRev||[];
+  setKpi('ord-topsku', skus[0]?.SKU||skus[0]?.['SKU']||'—');
+  setKpi('ord-products', fmtNum(skus.length));
+  setKpi('ord-cancel', '—');
+
+  if(charts.ordersOverTime) charts.ordersOverTime.destroy();
+  charts.ordersOverTime = new Chart(document.getElementById('ordersOverTimeChart'), {
+    type:'bar',
+    data:{labels:months, datasets:[{data:months.map(m=>ordersByM[m]||0), backgroundColor:'rgba(110,231,183,0.7)', borderRadius:3}]},
+    options:baseOpts()
+  });
+
+  if(charts.skuRevenue) charts.skuRevenue.destroy();
+  charts.skuRevenue = new Chart(document.getElementById('skuRevenueChart'), {
+    type:'bar',
+    data:{labels:skus.map(r=>(r.SKU||'?').substring(0,18)), datasets:[{data:skus.map(r=>r.Revenue||0), backgroundColor:'rgba(129,140,248,0.75)', borderRadius:4}]},
+    options:{...baseOpts(), indexAxis:'y', scales:{x:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}, y:{grid:{color:G},ticks:{color:T,font:{size:10}}}}}
+  });
+
+  // Recent orders table
+  const tbody = document.getElementById('recentOrdersBody');
+  const recent = allData.shopifyRecentOrders||[];
+  if(recent.length===0){
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No order data available</td></tr>';
+    return;
+  }
+  tbody.innerHTML = recent.slice(0,50).map(r=>{
+    const cancelled = r.Cancelled||r['Order Cancelled Date'];
+    const status = cancelled ? '<span style="color:var(--negative)">Cancelled</span>' : '<span style="color:var(--positive)">Active</span>';
+    const date = (r.Date||r['Date Ordered']||'').toString().substring(0,10);
+    return `<tr>
+      <td class="label">${r.OrderNum||r['Order Number']||'—'}</td>
+      <td>${date}</td>
+      <td>${r.Channel||r['Sales Channel']||'—'}</td>
+      <td>—</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── MONTH DETAIL ─────────────────────────────────────────────────────────
+let monthRevChart2=null, monthOrdChart2=null;
+
+function buildMonthSelector() {
+  const months = getMonthLabels();
+  const el = document.getElementById('monthSelector');
+  el.innerHTML='';
+  months.forEach((m,i)=>{
+    const btn=document.createElement('button');
+    btn.className='month-btn'+(i===months.length-1?' active':'');
+    btn.textContent=m;
+    btn.onclick=()=>{ selectMonth(m); document.querySelectorAll('.month-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); };
+    el.appendChild(btn);
+  });
+  if(months.length) selectMonth(months[months.length-1]);
+}
+
+function selectMonth(month) {
+  document.getElementById('monthChartTitle').textContent = month+' — Revenue by Channel';
+  document.getElementById('monthTableTitle').textContent = month+' — Detailed Breakdown';
+
+  const shopifyRev = (allData.shopifyRevByMonth||[]).find(r=>(r['Date Ordered']||'').substring(0,7)===month.replace(' ','').substring(0,7));
+  const amzUK = (allData.amazonUK||[]).find(r=>(r['Order Date']||'').substring(0,7)===toYearMonth(month));
+  const amzUS = (allData.amazonUS||[]).find(r=>(r['Order Date']||'').substring(0,7)===toYearMonth(month));
+  const amzEU = (allData.amazonEU||[]).find(r=>(r['Order Date']||'').substring(0,7)===toYearMonth(month));
+
+  const revData = [
+    {label:'Shopify', rev:shopifyRev?.Revenue||0, orders:shopifyRev?.Orders||0},
+    {label:'Amazon UK', rev:amzUK?.Revenue||0, units:amzUK?.Units||0},
+    {label:'Amazon US', rev:amzUS?.Revenue||0, units:amzUS?.Units||0},
+    {label:'Amazon EU', rev:amzEU?.Revenue||0, units:amzEU?.Units||0},
+  ];
+
+  if(monthRevChart2) monthRevChart2.destroy();
+  monthRevChart2 = new Chart(document.getElementById('monthRevenueChart'), {
+    type:'bar',
+    data:{labels:revData.map(r=>r.label), datasets:[{data:revData.map(r=>r.rev),
+      backgroundColor:['rgba(110,231,183,0.8)','rgba(129,140,248,0.8)','rgba(251,146,60,0.8)','rgba(244,114,182,0.8)'],
+      borderRadius:6}]},
+    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}}}
+  });
+
+  if(monthOrdChart2) monthOrdChart2.destroy();
+  monthOrdChart2 = new Chart(document.getElementById('monthOrdersChart'), {
+    type:'bar',
+    data:{labels:['Shopify','Amazon UK','Amazon US','Amazon EU'],
+      datasets:[{data:[shopifyRev?.Orders||0, amzUK?.Units||0, amzUS?.Units||0, amzEU?.Units||0],
+      backgroundColor:['rgba(110,231,183,0.7)','rgba(129,140,248,0.7)','rgba(251,146,60,0.7)','rgba(244,114,182,0.7)'],
+      borderRadius:6}]},
+    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T}}}}
+  });
+
+  const tbody=document.getElementById('monthTableBody');
+  tbody.innerHTML=revData.map(r=>{
+    const isShopify=r.label==='Shopify';
+    const pill=r.label==='Shopify'?'':'pill pill-'+(r.label.toLowerCase().replace('amazon ','amz').replace(' ',''));
+    return `<tr>
+      <td class="label">${r.label}</td>
+      <td>${fmtCurr(r.rev)}</td>
+      <td>${isShopify?fmtNum(r.orders||0)+' orders':fmtNum(r.units||0)+' units'}</td>
+      <td>${r.orders>0?fmtCurr(r.rev/(r.orders||1)):r.units>0?fmtCurr(r.rev/(r.units||1)):'—'}</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────
+function getMonthLabels() {
+  const set = new Set();
+  [...(allData.shopifyRevByMonth||[]), ...(allData.amazonUK||[])].forEach(r=>{
+    const d = r['Date Ordered']||r['Order Date']||'';
+    if(d) set.add(d.substring(0,7));
+  });
+  return [...set].sort().map(ym=>{
+    const [y,m]=ym.split('-');
+    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]+' '+y;
+  });
+}
+
+function toYearMonth(label) {
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [m,y]=label.split(' ');
+  return y+'-'+(months.indexOf(m)+1).toString().padStart(2,'0');
+}
+
+function aggregateByMonth(rows, dateGetter, valGetter) {
+  const out={};
+  rows.forEach(r=>{
+    const d=dateGetter(r);
+    if(!d) return;
+    const ym=d.substring(0,7);
+    const [y,m]=ym.split('-');
+    const label=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]+' '+y;
+    out[label]=(out[label]||0)+valGetter(r);
+  });
+  return out;
+}
+
+function switchTab(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+async function refreshData() {
+  document.getElementById('loadingScreen').style.display='flex';
+  document.getElementById('dashboard').style.display='none';
+  await loadData();
+}
+
+// ── START ──
+loadData();
+</script>
+</body>
+</html>
