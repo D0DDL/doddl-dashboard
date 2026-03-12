@@ -6,74 +6,93 @@
 <title>doddl — Live Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0f;
-    --surface: #13131a;
-    --surface2: #1a1a24;
-    --border: #2a2a3a;
-    --accent: #6ee7b7;
-    --accent2: #818cf8;
-    --accent3: #fb923c;
-    --accent4: #f472b6;
-    --text: #e2e8f0;
-    --text-muted: #64748b;
-    --text-dim: #94a3b8;
-    --uk: #6ee7b7;
-    --na: #818cf8;
-    --eu: #fb923c;
-    --positive: #4ade80;
-    --negative: #f87171;
-    --warning: #fbbf24;
+    /* doddl brand colours */
+    --indigo:    #3D157D;
+    --indigo-dark: #2a0e58;
+    --indigo-light: #5a28a8;
+    --aqua:      #30BEAA;
+    --aqua-light: #9ECFC6;
+    --orange:    #FACC91;
+    --light-indigo: #947FB6;
+    --cool-grey: #EAEAEA;
+    --white:     #FFFFFF;
+
+    /* UI surfaces */
+    --bg:        #ffffff;
+    --surface:   #ffffff;
+    --surface2:  #f7f8fa;
+    --border:    #e8eaed;
+    --border2:   #d0d4da;
+
+    /* Text */
+    --text:      #3D157D;
+    --text-muted:#6b7280;
+    --text-dim:  #9ca3af;
+
+    /* Semantic */
+    --positive:  #1aab8a;
+    --negative:  #e05757;
+    --warning:   #f5a623;
+
+    /* Channel colours */
+    --shopify:   #30BEAA;
+    --amzuk:     #3D157D;
+    --amzus:     #947FB6;
+    --amzeu:     #FACC91;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
+  body { background:var(--bg); color:var(--text); font-family:'Nunito',sans-serif; min-height:100vh; }
 
-  /* ── LOADING SCREEN ── */
+  /* ── LOADING ── */
   #loadingScreen {
-    position:fixed; inset:0; background:var(--bg); z-index:1000;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px;
+    position:fixed; inset:0; background:#ffffff; z-index:1000;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px;
   }
-  .loading-logo { font-size:48px; font-weight:700; letter-spacing:-2px; color:var(--accent); }
-  .loading-status { font-size:13px; color:var(--text-muted); font-family:'DM Mono',monospace; }
-  .loading-bar { width:280px; height:2px; background:var(--border); border-radius:2px; overflow:hidden; }
-  .loading-bar-fill { height:100%; background:var(--accent); border-radius:2px; width:0%; transition:width 0.4s ease; }
-  .loading-step { font-size:11px; color:var(--text-muted); margin-top:4px; }
+  .loading-logo { font-size:52px; font-weight:800; letter-spacing:-2px; color:var(--indigo); }
+  .loading-tagline { font-size:13px; color:var(--text-muted); letter-spacing:0.05em; font-weight:600; text-transform:uppercase; }
+  .loading-status { font-size:12px; color:var(--text-muted); font-weight:600; }
+  .loading-bar { width:260px; height:3px; background:var(--border); border-radius:3px; overflow:hidden; }
+  .loading-bar-fill { height:100%; background:var(--aqua); border-radius:3px; width:0%; transition:width 0.4s ease; }
+  .loading-step { font-size:11px; color:#d1d5db; margin-top:2px; }
 
-  /* ── ERROR SCREEN ── */
+  /* ── ERROR ── */
   #errorScreen {
-    position:fixed; inset:0; background:var(--bg); z-index:999;
+    position:fixed; inset:0; background:#ffffff; z-index:999;
     display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:40px;
   }
-  .error-title { font-size:20px; font-weight:600; color:var(--negative); }
-  .error-msg { font-size:13px; color:var(--text-dim); text-align:center; max-width:500px; line-height:1.6; font-family:'DM Mono',monospace; }
-  .error-retry { padding:10px 24px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); cursor:pointer; font-size:13px; font-family:'DM Sans',sans-serif; }
-  .error-retry:hover { border-color:var(--accent); color:var(--accent); }
+  .error-title { font-size:20px; font-weight:700; color:var(--indigo); }
+  .error-msg { font-size:13px; color:var(--text-muted); text-align:center; max-width:500px; line-height:1.6; }
+  .error-retry { padding:10px 28px; background:var(--indigo); border:none; border-radius:8px; color:#ffffff; cursor:pointer; font-size:13px; font-family:'Nunito',sans-serif; font-weight:700; }
 
   /* ── HEADER ── */
   .header {
     display:flex; align-items:center; justify-content:space-between;
-    padding:18px 32px; border-bottom:1px solid var(--border);
-    background:var(--surface); position:sticky; top:0; z-index:100;
+    padding:0 32px; height:60px; border-bottom:1px solid var(--border);
+    background:#ffffff; position:sticky; top:0; z-index:100;
   }
-  .logo { display:flex; align-items:center; gap:12px; }
-  .logo-mark { width:34px; height:34px; background:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--bg); font-size:15px; }
-  .logo-name { font-size:17px; font-weight:600; letter-spacing:-0.5px; }
-  .logo-sub { font-size:11px; color:var(--text-muted); }
-  .header-right { display:flex; align-items:center; gap:16px; }
-  .live-badge { display:flex; align-items:center; gap:6px; background:rgba(74,222,128,0.1); border:1px solid rgba(74,222,128,0.2); padding:5px 12px; border-radius:20px; font-size:11px; color:var(--positive); }
-  .live-badge::before { content:''; width:6px; height:6px; background:var(--positive); border-radius:50%; animation:pulse 2s infinite; }
+  .logo { display:flex; align-items:center; gap:14px; }
+  .logo-wordmark { font-size:26px; font-weight:800; color:var(--indigo); letter-spacing:-1px; }
+  .logo-divider { width:1px; height:22px; background:var(--border); }
+  .logo-sub { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; }
+  .header-right { display:flex; align-items:center; gap:14px; }
+  .live-badge { display:flex; align-items:center; gap:6px; background:rgba(48,190,170,0.08); border:1px solid rgba(48,190,170,0.25); padding:5px 12px; border-radius:20px; font-size:11px; color:#1aab8a; font-weight:700; }
+  .live-badge::before { content:''; width:6px; height:6px; background:#1aab8a; border-radius:50%; animation:pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .last-refresh { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; }
-  .refresh-btn { padding:6px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text-dim); font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
-  .refresh-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .last-refresh { font-size:11px; color:var(--text-muted); font-weight:600; }
+  .user-display { font-size:12px; color:var(--text-muted); font-weight:600; }
+  .header-btn { padding:6px 14px; background:#f7f8fa; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:12px; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:600; transition:all 0.15s; }
+  .header-btn:hover { border-color:var(--aqua); color:var(--indigo); background:#fff; }
+  .header-btn.danger { color:#e05757; border-color:#fde8e8; background:#fff9f9; }
+  .header-btn.danger:hover { border-color:#e05757; }
 
   /* ── NAV ── */
-  .nav { display:flex; gap:4px; padding:14px 32px 0; border-bottom:1px solid var(--border); background:var(--surface); }
-  .nav-tab { padding:9px 16px; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; border-radius:6px 6px 0 0; border:1px solid transparent; border-bottom:none; transition:all 0.15s; position:relative; bottom:-1px; }
-  .nav-tab:hover { color:var(--text-dim); }
-  .nav-tab.active { color:var(--text); background:var(--bg); border-color:var(--border); border-bottom-color:var(--bg); }
+  .nav { display:flex; gap:0; padding:0 24px; border-bottom:1px solid var(--border); background:#ffffff; overflow-x:auto; }
+  .nav-tab { padding:14px 20px; font-size:13px; font-weight:700; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; transition:all 0.15s; white-space:nowrap; }
+  .nav-tab:hover { color:var(--indigo); }
+  .nav-tab.active { color:var(--indigo); border-bottom-color:var(--aqua); }
 
   /* ── MAIN ── */
   .main { padding:24px 32px; max-width:1600px; margin:0 auto; }
@@ -81,83 +100,90 @@
   .page.active { display:block; }
 
   /* ── KPI ROW ── */
-  .kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px; }
-  .kpi-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; position:relative; overflow:hidden; transition:border-color 0.2s; }
-  .kpi-card:hover { border-color:#3a3a50; }
-  .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
-  .kpi-card.c1::before{background:var(--accent)} .kpi-card.c2::before{background:var(--accent2)} .kpi-card.c3::before{background:var(--accent3)} .kpi-card.c4::before{background:var(--accent4)} .kpi-card.c5::before{background:#38bdf8} .kpi-card.c6::before{background:var(--warning)}
-  .kpi-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; margin-bottom:7px; }
-  .kpi-value { font-size:22px; font-weight:700; letter-spacing:-1px; font-family:'DM Mono',monospace; }
-  .kpi-value.loading-val { color:var(--border); animation:shimmer 1.5s infinite; }
+  .kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:14px; margin-bottom:22px; }
+  .kpi-card { background:#ffffff; border:1px solid var(--border); border-radius:12px; padding:18px 20px; position:relative; overflow:hidden; transition:box-shadow 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+  .kpi-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+  .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:12px 12px 0 0; }
+  .kpi-card.c1::before{background:var(--aqua)} .kpi-card.c2::before{background:var(--indigo)} .kpi-card.c3::before{background:var(--light-indigo)} .kpi-card.c4::before{background:var(--aqua)} .kpi-card.c5::before{background:var(--indigo-light)} .kpi-card.c6::before{background:var(--orange)}
+  .kpi-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; font-weight:700; margin-bottom:8px; }
+  .kpi-value { font-size:24px; font-weight:800; letter-spacing:-1px; color:var(--indigo); }
+  .kpi-value.loading-val { color:var(--border2); animation:shimmer 1.5s infinite; }
   @keyframes shimmer { 0%,100%{opacity:0.4} 50%{opacity:1} }
-  .kpi-sub { font-size:11px; color:var(--text-muted); margin-top:3px; }
-  .kpi-change { font-size:11px; margin-top:5px; font-weight:500; }
-  .kpi-change.up{color:var(--positive)} .kpi-change.down{color:var(--negative)} .kpi-change.neutral{color:var(--text-muted)}
+  .kpi-sub { font-size:11px; color:var(--text-muted); margin-top:4px; font-weight:600; }
 
   /* ── CHARTS ── */
   .charts-grid { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
   .charts-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
   .charts-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
-  .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .chart-card { background:#ffffff; border:1px solid var(--border); border-radius:12px; padding:22px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
   .chart-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; }
-  .chart-title { font-size:13px; font-weight:600; margin-bottom:2px; }
-  .chart-subtitle { font-size:11px; color:var(--text-muted); }
+  .chart-title { font-size:14px; font-weight:700; color:var(--indigo); margin-bottom:2px; }
+  .chart-subtitle { font-size:11px; color:var(--text-muted); font-weight:600; }
   .chart-legend { display:flex; gap:12px; flex-wrap:wrap; }
-  .legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-dim); }
+  .legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-muted); font-weight:600; }
   .legend-dot { width:8px; height:8px; border-radius:2px; }
   .chart-wrap { position:relative; }
   .chart-wrap.h280 { height:280px; }
+  .chart-wrap.h240 { height:240px; }
   .chart-wrap.h220 { height:220px; }
   .chart-wrap.h180 { height:180px; }
 
   /* ── TABLE ── */
   .data-table { width:100%; border-collapse:collapse; font-size:12px; }
-  .data-table th { text-align:left; padding:10px 12px; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); font-weight:600; border-bottom:1px solid var(--border); white-space:nowrap; }
-  .data-table td { padding:10px 12px; border-bottom:1px solid #1e1e2a; color:var(--text-dim); font-family:'DM Mono',monospace; font-size:12px; white-space:nowrap; }
-  .data-table tr:hover td { background:var(--surface2); }
-  .data-table td.label { font-family:'DM Sans',sans-serif; font-weight:500; color:var(--text); }
-  .pill { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
-  .pill-uk{background:rgba(110,231,183,0.15);color:var(--uk)} .pill-na{background:rgba(129,140,248,0.15);color:var(--na)} .pill-eu{background:rgba(251,146,60,0.15);color:var(--eu)}
+  .data-table th { text-align:left; padding:10px 14px; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted); font-weight:700; border-bottom:2px solid var(--border); white-space:nowrap; background:#f7f8fa; }
+  .data-table td { padding:10px 14px; border-bottom:1px solid var(--border); color:#374151; font-size:12px; white-space:nowrap; font-weight:600; }
+  .data-table tr:hover td { background:#f7f8fa; }
+  .data-table td.label { color:var(--indigo); font-weight:700; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:10px; font-size:10px; font-weight:700; }
+  .pill-cat { background:rgba(61,21,125,0.1); color:var(--indigo); }
+  .pill-bundle { background:rgba(48,190,170,0.12); color:var(--aqua); }
+  .pill-single { background:rgba(148,127,182,0.15); color:var(--light-indigo); }
+
+  /* ── SORT CONTROLS ── */
+  .sort-controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  .sort-btn { padding:6px 14px; border-radius:7px; border:1px solid var(--border); background:#ffffff; color:var(--text-muted); font-size:12px; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; transition:all 0.15s; }
+  .sort-btn:hover { border-color:var(--aqua); color:var(--indigo); }
+  .sort-btn.active { background:var(--indigo); color:white; border-color:var(--indigo); }
+  .filter-label { font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
 
   /* ── MONTH SELECTOR ── */
   .month-selector { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; }
-  .month-btn { padding:5px 12px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
-  .month-btn:hover { border-color:#3a3a50; color:var(--text-dim); }
-  .month-btn.active { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:600; }
-
-  /* ── INSIGHTS ── */
-  .insight-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
-  .insight-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
-  .insight-flag { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
-  .flag-dot { width:6px; height:6px; border-radius:50%; }
-  .insight-text { font-size:12px; color:var(--text-dim); line-height:1.6; }
-  .insight-text strong { color:var(--text); }
+  .month-btn { padding:6px 14px; border-radius:7px; border:1px solid var(--border); background:#ffffff; color:var(--text-muted); font-size:12px; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; transition:all 0.15s; }
+  .month-btn:hover { border-color:var(--aqua); color:var(--indigo); }
+  .month-btn.active { background:var(--indigo); color:white; border-color:var(--indigo); }
 
   /* ── SECTION LABEL ── */
-  .section-label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; }
+  .section-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px; }
 
   /* ── DATA NOTICE ── */
-  .data-notice { display:flex; align-items:center; gap:8px; background:rgba(129,140,248,0.08); border:1px solid rgba(129,140,248,0.2); border-radius:8px; padding:10px 16px; font-size:12px; color:var(--text-dim); margin-bottom:20px; }
-  .data-notice span { color:var(--accent2); font-weight:600; }
+  .data-notice { display:flex; align-items:center; gap:10px; background:#f0fdfb; border:1px solid rgba(48,190,170,0.25); border-radius:10px; padding:10px 18px; font-size:12px; color:var(--text-muted); margin-bottom:20px; font-weight:600; }
+  .data-notice span { color:var(--indigo); font-weight:700; }
+
+  /* ── PROGRESS BARS ── */
+  .progress-bar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:6px; }
+  .progress-fill { height:100%; background:var(--aqua); border-radius:3px; transition:width 0.3s; }
 
   @media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:768px){.kpi-row{grid-template-columns:repeat(2,1fr)}.charts-grid,.charts-grid-2,.charts-grid-3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<!-- Loading Screen -->
+<!-- Loading -->
 <div id="loadingScreen">
   <div class="loading-logo">doddl</div>
-  <div class="loading-status">Connecting to Fabric...</div>
+  <div class="loading-tagline">Live Performance Dashboard</div>
   <div class="loading-bar"><div class="loading-bar-fill" id="loadBar"></div></div>
+  <div class="loading-status" id="loadStatus">Connecting to Fabric...</div>
   <div class="loading-step" id="loadStep">Authenticating with Azure AD</div>
 </div>
 
-<!-- Error Screen -->
+<!-- Error -->
 <div id="errorScreen">
-  <div class="error-title">Connection Failed</div>
+  <div class="loading-logo">doddl</div>
+  <div class="error-title" style="margin-top:8px">Connection Failed</div>
   <div class="error-msg" id="errorMsg">Unable to connect to Fabric.</div>
-  <button class="error-retry" onclick="location.reload()">Retry</button>
+  <button class="error-retry" onclick="location.reload()">↻ Try Again</button>
 </div>
 
 <!-- Dashboard -->
@@ -165,24 +191,23 @@
 
   <div class="header">
     <div class="logo">
-      <div class="logo-mark">d</div>
-      <div>
-        <div class="logo-name">doddl</div>
-        <div class="logo-sub">Live Performance Dashboard</div>
-      </div>
+      <div class="logo-wordmark">doddl</div>
+      <div class="logo-divider"></div>
+      <div class="logo-sub">Live Performance Dashboard</div>
     </div>
     <div class="header-right">
       <span class="last-refresh" id="lastRefresh">—</span>
-      <span class="last-refresh" id="userDisplay" style="color:var(--accent)"></span>
+      <span class="user-display" id="userDisplay"></span>
       <span class="live-badge">Live · Fabric</span>
-      <button class="refresh-btn" onclick="refreshData()">↻ Refresh</button>
-      <button class="refresh-btn" onclick="signOut()" style="color:var(--negative);border-color:rgba(248,113,113,0.2)">Sign out</button>
+      <button class="header-btn" onclick="refreshData()">↻ Refresh</button>
+      <button class="header-btn danger" onclick="signOut()">Sign out</button>
     </div>
   </div>
 
   <div class="nav">
     <div class="nav-tab active" onclick="switchTab('overview',this)">Overview</div>
     <div class="nav-tab" onclick="switchTab('channels',this)">Channels</div>
+    <div class="nav-tab" onclick="switchTab('products',this)">Products & SKUs</div>
     <div class="nav-tab" onclick="switchTab('marketing',this)">Marketing</div>
     <div class="nav-tab" onclick="switchTab('monthly',this)">Monthly Detail</div>
     <div class="nav-tab" onclick="switchTab('orders',this)">Orders</div>
@@ -193,25 +218,25 @@
     <!-- OVERVIEW -->
     <div class="page active" id="page-overview">
       <div class="data-notice">
-        <span>Live</span> — data pulled directly from Doddl_Lakehouse_LIVE_WINSDOR · Last refreshed: <span id="overviewRefreshTime">—</span>
+        <span>Live</span> — data pulled from Doddl_Lakehouse_LIVE_WINSDOR via Fabric · Refreshed: <span id="overviewRefreshTime">—</span>
       </div>
-      <div class="kpi-row" id="overviewKpis">
-        <div class="kpi-card c1"><div class="kpi-label">Total Revenue</div><div class="kpi-value loading-val" id="kpi-revenue">—</div><div class="kpi-sub" id="kpi-revenue-sub">Loading...</div></div>
-        <div class="kpi-card c2"><div class="kpi-label">Total Orders</div><div class="kpi-value loading-val" id="kpi-orders">—</div><div class="kpi-sub" id="kpi-orders-sub">Loading...</div></div>
-        <div class="kpi-card c3"><div class="kpi-label">Avg Order Value</div><div class="kpi-value loading-val" id="kpi-aov">—</div><div class="kpi-sub" id="kpi-aov-sub">Loading...</div></div>
+      <div class="kpi-row">
+        <div class="kpi-card c1"><div class="kpi-label">Total Revenue</div><div class="kpi-value loading-val" id="kpi-revenue">—</div><div class="kpi-sub" id="kpi-revenue-sub">All channels</div></div>
+        <div class="kpi-card c2"><div class="kpi-label">Total Orders</div><div class="kpi-value loading-val" id="kpi-orders">—</div><div class="kpi-sub" id="kpi-orders-sub">Shopify orders</div></div>
+        <div class="kpi-card c3"><div class="kpi-label">Avg Order Value</div><div class="kpi-value loading-val" id="kpi-aov">—</div><div class="kpi-sub" id="kpi-aov-sub">Shopify AOV</div></div>
         <div class="kpi-card c4"><div class="kpi-label">Shopify Revenue</div><div class="kpi-value loading-val" id="kpi-shopify">—</div><div class="kpi-sub" id="kpi-shopify-sub">Loading...</div></div>
-        <div class="kpi-card c5"><div class="kpi-label">Amazon Revenue</div><div class="kpi-value loading-val" id="kpi-amazon">—</div><div class="kpi-sub" id="kpi-amazon-sub">Loading...</div></div>
-        <div class="kpi-card c6"><div class="kpi-label">Data Through</div><div class="kpi-value loading-val" id="kpi-date">—</div><div class="kpi-sub" id="kpi-date-sub">Latest order date</div></div>
+        <div class="kpi-card c5"><div class="kpi-label">Amazon Revenue</div><div class="kpi-value loading-val" id="kpi-amazon">—</div><div class="kpi-sub" id="kpi-amazon-sub">UK + US + EU</div></div>
+        <div class="kpi-card c6"><div class="kpi-label">Data Through</div><div class="kpi-value loading-val" id="kpi-date">—</div><div class="kpi-sub">Latest order date</div></div>
       </div>
       <div class="charts-grid">
         <div class="chart-card">
           <div class="chart-header">
             <div><div class="chart-title">Revenue by Month</div><div class="chart-subtitle">All channels combined</div></div>
             <div class="chart-legend">
-              <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Shopify</div>
-              <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Amazon UK</div>
-              <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Amazon US</div>
-              <div class="legend-item"><div class="legend-dot" style="background:var(--accent4)"></div>Amazon EU</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--aqua)"></div>Shopify</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--indigo)"></div>Amazon UK</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--light-indigo)"></div>Amazon US</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Amazon EU</div>
             </div>
           </div>
           <div class="chart-wrap h280"><canvas id="revenueByMonthChart"></canvas></div>
@@ -223,15 +248,15 @@
       </div>
       <div class="charts-grid-3">
         <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">Orders by Month</div><div class="chart-subtitle">All channels</div></div></div>
+          <div class="chart-header"><div><div class="chart-title">Orders by Month</div><div class="chart-subtitle">Shopify</div></div></div>
           <div class="chart-wrap h180"><canvas id="ordersByMonthChart"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">AOV by Channel</div><div class="chart-subtitle">Average order value £</div></div></div>
+          <div class="chart-header"><div><div class="chart-title">AOV by Channel</div><div class="chart-subtitle">Average order value</div></div></div>
           <div class="chart-wrap h180"><canvas id="aovByChannelChart"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">Top Products by Revenue</div><div class="chart-subtitle">Shopify — all time</div></div></div>
+          <div class="chart-header"><div><div class="chart-title">Top Products</div><div class="chart-subtitle">Shopify — by revenue</div></div></div>
           <div class="chart-wrap h180"><canvas id="topProductsChart"></canvas></div>
         </div>
       </div>
@@ -242,24 +267,24 @@
       <div class="kpi-row">
         <div class="kpi-card c1"><div class="kpi-label">Shopify Revenue</div><div class="kpi-value loading-val" id="ch-shopify-rev">—</div><div class="kpi-sub" id="ch-shopify-orders">— orders</div></div>
         <div class="kpi-card c2"><div class="kpi-label">Shopify AOV</div><div class="kpi-value loading-val" id="ch-shopify-aov">—</div><div class="kpi-sub">Average order value</div></div>
-        <div class="kpi-card c3"><div class="kpi-label">Amazon UK Rev</div><div class="kpi-value loading-val" id="ch-amzuk-rev">—</div><div class="kpi-sub" id="ch-amzuk-units">— units</div></div>
-        <div class="kpi-card c4"><div class="kpi-label">Amazon US Rev</div><div class="kpi-value loading-val" id="ch-amzus-rev">—</div><div class="kpi-sub" id="ch-amzus-units">— units</div></div>
-        <div class="kpi-card c5"><div class="kpi-label">Amazon EU Rev</div><div class="kpi-value loading-val" id="ch-amzeu-rev">—</div><div class="kpi-sub" id="ch-amzeu-units">— units</div></div>
-        <div class="kpi-card c6"><div class="kpi-label">Amazon Conv Rate</div><div class="kpi-value loading-val" id="ch-cvr">—</div><div class="kpi-sub">Avg across markets</div></div>
+        <div class="kpi-card c3"><div class="kpi-label">Amazon UK</div><div class="kpi-value loading-val" id="ch-amzuk-rev">—</div><div class="kpi-sub" id="ch-amzuk-units">— units</div></div>
+        <div class="kpi-card c4"><div class="kpi-label">Amazon US</div><div class="kpi-value loading-val" id="ch-amzus-rev">—</div><div class="kpi-sub" id="ch-amzus-units">— units</div></div>
+        <div class="kpi-card c5"><div class="kpi-label">Amazon EU</div><div class="kpi-value loading-val" id="ch-amzeu-rev">—</div><div class="kpi-sub" id="ch-amzeu-units">— units</div></div>
+        <div class="kpi-card c6"><div class="kpi-label">Amazon Conv Rate</div><div class="kpi-value loading-val" id="ch-cvr">—</div><div class="kpi-sub">UK sessions to purchase</div></div>
       </div>
       <div class="charts-grid">
         <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">Amazon Revenue by Market — Monthly</div><div class="chart-subtitle">UK vs US vs EU</div></div>
+          <div class="chart-header"><div><div class="chart-title">Amazon Revenue by Market</div><div class="chart-subtitle">UK vs US vs EU — monthly</div></div>
             <div class="chart-legend">
-              <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>UK</div>
-              <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>US</div>
-              <div class="legend-item"><div class="legend-dot" style="background:var(--accent4)"></div>EU</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--indigo)"></div>UK</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--light-indigo)"></div>US</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>EU</div>
             </div>
           </div>
           <div class="chart-wrap h280"><canvas id="amazonByMarketChart"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">Shopify Revenue by Sales Channel</div><div class="chart-subtitle">Where Shopify orders come from</div></div></div>
+          <div class="chart-header"><div><div class="chart-title">Shopify by Sales Channel</div><div class="chart-subtitle">Where Shopify orders originate</div></div></div>
           <div class="chart-wrap h280"><canvas id="shopifyChannelChart"></canvas></div>
         </div>
       </div>
@@ -269,16 +294,69 @@
           <div class="chart-wrap h220"><canvas id="amazonUnitsChart"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">Amazon Conversion Rate</div><div class="chart-subtitle">Session to purchase %</div></div></div>
+          <div class="chart-header"><div><div class="chart-title">Amazon Conversion Rate</div><div class="chart-subtitle">Sessions → purchase %</div></div></div>
           <div class="chart-wrap h220"><canvas id="amazonCvrChart"></canvas></div>
         </div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS & SKUs -->
+    <div class="page" id="page-products">
+      <div class="data-notice">
+        <span>SKU data</span> — unit sales from Shopify_Orders_Lines joined with doddl_SKU_Mapping · Bundles flagged separately
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-card c1"><div class="kpi-label">Total Units Sold</div><div class="kpi-value loading-val" id="sku-total-units">—</div><div class="kpi-sub">Shopify all SKUs</div></div>
+        <div class="kpi-card c2"><div class="kpi-label">Unique SKUs</div><div class="kpi-value loading-val" id="sku-count">—</div><div class="kpi-sub">Distinct SKUs sold</div></div>
+        <div class="kpi-card c3"><div class="kpi-label">Top SKU by Units</div><div class="kpi-value loading-val" id="sku-top-units" style="font-size:15px">—</div><div class="kpi-sub" id="sku-top-units-sub">—</div></div>
+        <div class="kpi-card c4"><div class="kpi-label">Top SKU by Revenue</div><div class="kpi-value loading-val" id="sku-top-rev" style="font-size:15px">—</div><div class="kpi-sub" id="sku-top-rev-sub">—</div></div>
+        <div class="kpi-card c5"><div class="kpi-label">Bundle Units</div><div class="kpi-value loading-val" id="sku-bundle-units">—</div><div class="kpi-sub">Pack type = Bundle</div></div>
+        <div class="kpi-card c6"><div class="kpi-label">Avg Units / SKU</div><div class="kpi-value loading-val" id="sku-avg-units">—</div><div class="kpi-sub">Mean across active SKUs</div></div>
+      </div>
+
+      <div class="charts-grid-2" style="margin-bottom:16px">
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Units Sold by SKU</div><div class="chart-subtitle">Top 15 — Shopify order lines</div></div></div>
+          <div class="chart-wrap h280"><canvas id="skuUnitsChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><div><div class="chart-title">Units by Product Category</div><div class="chart-subtitle">Cutlery / Bowl / Plate / Bundles</div></div></div>
+          <div class="chart-wrap h280"><canvas id="skuCategoryChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-bottom:16px">
+        <div class="chart-header">
+          <div><div class="chart-title">Units Sold by SKU — Full Table</div><div class="chart-subtitle">All SKUs from Shopify order lines</div></div>
+          <div class="sort-controls">
+            <span class="filter-label">Sort by:</span>
+            <button class="sort-btn active" onclick="sortSkuTable('units',this)">Units ↓</button>
+            <button class="sort-btn" onclick="sortSkuTable('revenue',this)">Revenue</button>
+            <button class="sort-btn" onclick="sortSkuTable('sku',this)">SKU A–Z</button>
+          </div>
+        </div>
+        <table class="data-table" id="skuTable">
+          <thead><tr>
+            <th>SKU</th>
+            <th>Product Name</th>
+            <th>Category</th>
+            <th>Pack Type</th>
+            <th>Units Sold</th>
+            <th>Revenue</th>
+            <th>Avg Unit Price</th>
+            <th>% of Total Units</th>
+          </tr></thead>
+          <tbody id="skuTableBody">
+            <tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text-muted)">Loading SKU data...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <!-- MARKETING -->
     <div class="page" id="page-marketing">
       <div class="data-notice">
-        <span>Note</span> — Ad data from Google Ads campaigns. Meta data coming once cleaned.
+        <span>Note</span> — Google Ads data live once table columns cleaned in Fabric. Meta data coming soon.
       </div>
       <div class="kpi-row">
         <div class="kpi-card c1"><div class="kpi-label">Total Impressions</div><div class="kpi-value loading-val" id="mkt-impressions">—</div><div class="kpi-sub">Google Ads</div></div>
@@ -298,16 +376,6 @@
           <div class="chart-wrap h280"><canvas id="topCampaignsChart"></canvas></div>
         </div>
       </div>
-      <div class="charts-grid-2">
-        <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">CTR Trend</div><div class="chart-subtitle">Click through rate over time</div></div></div>
-          <div class="chart-wrap h220"><canvas id="ctrChart"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">CPC Trend</div><div class="chart-subtitle">Cost per click over time</div></div></div>
-          <div class="chart-wrap h220"><canvas id="cpcChart"></canvas></div>
-        </div>
-      </div>
     </div>
 
     <!-- MONTHLY DETAIL -->
@@ -320,16 +388,14 @@
           <div class="chart-wrap h220"><canvas id="monthRevenueChart"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">Orders by Channel</div><div class="chart-subtitle">Selected month</div></div></div>
+          <div class="chart-header"><div><div class="chart-title">Orders / Units by Channel</div><div class="chart-subtitle">Selected month</div></div></div>
           <div class="chart-wrap h220"><canvas id="monthOrdersChart"></canvas></div>
         </div>
       </div>
       <div class="chart-card">
         <div class="chart-header"><div><div class="chart-title" id="monthTableTitle">Detailed Breakdown</div></div></div>
         <table class="data-table">
-          <thead><tr>
-            <th>Channel</th><th>Revenue</th><th>Orders / Units</th><th>AOV / ASP</th><th>Sessions</th><th>Conv Rate</th>
-          </tr></thead>
+          <thead><tr><th>Channel</th><th>Revenue</th><th>Orders / Units</th><th>AOV / ASP</th><th>Sessions</th><th>Conv Rate</th></tr></thead>
           <tbody id="monthTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">Select a month above</td></tr></tbody>
         </table>
       </div>
@@ -338,16 +404,16 @@
     <!-- ORDERS -->
     <div class="page" id="page-orders">
       <div class="kpi-row">
-        <div class="kpi-card c1"><div class="kpi-label">Total Shopify Orders</div><div class="kpi-value loading-val" id="ord-total">—</div><div class="kpi-sub" id="ord-total-sub">All time</div></div>
+        <div class="kpi-card c1"><div class="kpi-label">Total Shopify Orders</div><div class="kpi-value loading-val" id="ord-total">—</div><div class="kpi-sub">All time</div></div>
         <div class="kpi-card c2"><div class="kpi-label">Avg Daily Orders</div><div class="kpi-value loading-val" id="ord-daily">—</div><div class="kpi-sub">Shopify</div></div>
-        <div class="kpi-card c3"><div class="kpi-label">Total Revenue</div><div class="kpi-value loading-val" id="ord-rev">—</div><div class="kpi-sub">Shopify order lines</div></div>
+        <div class="kpi-card c3"><div class="kpi-label">Shopify Revenue</div><div class="kpi-value loading-val" id="ord-rev">—</div><div class="kpi-sub">Total</div></div>
         <div class="kpi-card c4"><div class="kpi-label">Top SKU</div><div class="kpi-value loading-val" id="ord-topsku" style="font-size:14px">—</div><div class="kpi-sub">By revenue</div></div>
-        <div class="kpi-card c5"><div class="kpi-label">Unique Products</div><div class="kpi-value loading-val" id="ord-products">—</div><div class="kpi-sub">Distinct SKUs sold</div></div>
+        <div class="kpi-card c5"><div class="kpi-label">Unique SKUs</div><div class="kpi-value loading-val" id="ord-products">—</div><div class="kpi-sub">Distinct SKUs sold</div></div>
         <div class="kpi-card c6"><div class="kpi-label">Cancellation Rate</div><div class="kpi-value loading-val" id="ord-cancel">—</div><div class="kpi-sub">% orders cancelled</div></div>
       </div>
       <div class="charts-grid">
         <div class="chart-card">
-          <div class="chart-header"><div><div class="chart-title">Shopify Orders Over Time</div><div class="chart-subtitle">Daily order count</div></div></div>
+          <div class="chart-header"><div><div class="chart-title">Shopify Orders Over Time</div><div class="chart-subtitle">Monthly order count</div></div></div>
           <div class="chart-wrap h280"><canvas id="ordersOverTimeChart"></canvas></div>
         </div>
         <div class="chart-card">
@@ -370,36 +436,52 @@
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const CONFIG = {
-  tenantId:    '927d1e2c-7c8d-406f-8640-678dfce86b7d',
-  clientId:    '42c64061-ba34-4109-8aa8-ae4f55c62f9f',
-  scopes:      ['https://analysis.windows.net/powerbi/api/Dataset.Read.All',
-                'https://analysis.windows.net/powerbi/api/Workspace.Read.All']
+  tenantId: '927d1e2c-7c8d-406f-8640-678dfce86b7d',
+  clientId: '42c64061-ba34-4109-8aa8-ae4f55c62f9f',
+  scopes:   ['https://analysis.windows.net/powerbi/api/Dataset.Read.All',
+             'https://analysis.windows.net/powerbi/api/Workspace.Read.All']
 };
 
-// ─── MSAL CONFIG ──────────────────────────────────────────────────────────
 const msalConfig = {
   auth: {
     clientId:    CONFIG.clientId,
     authority:   'https://login.microsoftonline.com/' + CONFIG.tenantId,
     redirectUri: window.location.href.split('?')[0].split('#')[0]
   },
-  cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+  cache: { cacheLocation:'sessionStorage', storeAuthStateInCookie:false }
 };
 
 let msalInstance = null;
 
-// ─── CHART DEFAULTS ────────────────────────────────────────────────────────
-Chart.defaults.color = '#64748b';
-Chart.defaults.font.family = 'DM Sans';
+// ─── doddl BRAND CHART DEFAULTS ───────────────────────────────────────────
+Chart.defaults.font.family = 'Nunito';
 Chart.defaults.font.size = 11;
-const G = 'rgba(42,42,58,0.8)';
-const T = '#475569';
+Chart.defaults.font.weight = '600';
+Chart.defaults.color = '#6b7280';
+
+const G  = 'rgba(232,234,237,0.8)';  // grid lines — neutral grey
+const T  = '#9ca3af';                  // tick labels
+const AQUA   = '#30BEAA';
+const INDIGO = '#3D157D';
+const LIGHT_INDIGO = '#947FB6';
+const ORANGE = '#FACC91';
+const AQUA_LIGHT = '#9ECFC6';
+
+const PALETTE = [AQUA, INDIGO, LIGHT_INDIGO, ORANGE, AQUA_LIGHT, '#5a28a8', '#c7b9e8', '#1aab8a'];
+
 const charts = {};
 
 function baseOpts(extra={}) {
   return {
     responsive:true, maintainAspectRatio:false,
-    plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#1a1a24',borderColor:'#2a2a3a',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#94a3b8',padding:10} },
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'#ffffff', borderColor:'#e8eaed', borderWidth:1,
+        titleColor:'#3D157D', bodyColor:'#6b7280', padding:12,
+        titleFont:{family:'Nunito',weight:'700'}, bodyFont:{family:'Nunito',weight:'600'}
+      }
+    },
     scales:{ x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T}} },
     ...extra
   };
@@ -407,223 +489,141 @@ function baseOpts(extra={}) {
 
 function fmtCurr(v, sym='£') {
   if(v>=1000000) return sym+(v/1000000).toFixed(2)+'M';
-  if(v>=1000) return sym+(v/1000).toFixed(1)+'K';
+  if(v>=1000)    return sym+(v/1000).toFixed(1)+'K';
   return sym+v.toFixed(0);
 }
 function fmtNum(v) {
   if(v>=1000000) return (v/1000000).toFixed(1)+'M';
-  if(v>=1000) return (v/1000).toFixed(1)+'K';
+  if(v>=1000)    return (v/1000).toFixed(1)+'K';
   return Math.round(v).toString();
 }
-function setKpi(id, val, loading=false) {
+function setKpi(id, val) {
   const el = document.getElementById(id);
   if(!el) return;
   el.textContent = val;
-  el.classList.toggle('loading-val', loading);
+  el.classList.remove('loading-val');
 }
 
-// ─── LOADING UI ────────────────────────────────────────────────────────────
-function setLoad(pct, msg) {
+function setLoad(pct, msg, step='') {
   document.getElementById('loadBar').style.width = pct+'%';
-  document.getElementById('loadStep').textContent = msg;
-  document.querySelector('#loadingScreen .loading-status').textContent = pct < 100 ? 'Connecting to Fabric...' : 'Loading dashboard...';
+  document.getElementById('loadStatus').textContent = msg;
+  if(step) document.getElementById('loadStep').textContent = step;
 }
 function showError(msg) {
-  document.getElementById('loadingScreen').style.display='none';
+  document.getElementById('loadingScreen').style.display = 'none';
   const es = document.getElementById('errorScreen');
-  es.style.display='flex';
+  es.style.display = 'flex';
   document.getElementById('errorMsg').textContent = msg;
 }
 
-// ─── AUTH: MSAL browser login ──────────────────────────────────────────────
+// ─── AUTH ──────────────────────────────────────────────────────────────────
 async function getToken() {
   if(!msalInstance) {
     await loadMSAL();
     msalInstance = new msal.PublicClientApplication(msalConfig);
     await msalInstance.initialize();
   }
-
-  // Handle redirect response if returning from login
   const redirectResult = await msalInstance.handleRedirectPromise();
   if(redirectResult) return redirectResult.accessToken;
-
-  // Check for existing account
   const accounts = msalInstance.getAllAccounts();
-
   if(accounts.length > 0) {
     try {
-      const silentResult = await msalInstance.acquireTokenSilent({
-        scopes: CONFIG.scopes,
-        account: accounts[0]
-      });
-      return silentResult.accessToken;
-    } catch(e) {
-      // Silent failed — fall through to interactive
-    }
+      const r = await msalInstance.acquireTokenSilent({ scopes:CONFIG.scopes, account:accounts[0] });
+      return r.accessToken;
+    } catch(e) {}
   }
-
-  // Interactive login
-  setLoad(15, 'Redirecting to Microsoft login...');
-  await msalInstance.loginRedirect({ scopes: CONFIG.scopes });
-  return null; // page will redirect
+  setLoad(15, 'Redirecting to Microsoft login...', 'Opening login window');
+  await msalInstance.loginRedirect({ scopes:CONFIG.scopes });
+  return null;
 }
 
 function loadMSAL() {
-  return new Promise((resolve, reject) => {
-    if(window.msal) return resolve();
+  return new Promise((res,rej) => {
+    if(window.msal) return res();
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js';
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Failed to load MSAL library'));
+    s.onload = res; s.onerror = ()=>rej(new Error('Failed to load MSAL'));
     document.head.appendChild(s);
   });
 }
 
-// ─── QUERY FABRIC via REST API ────────────────────────────────────────────
-// Fabric SQL analytics endpoint supports REST queries via the executeQuery API
-async function queryFabric(token, sql) {
-  // Use Power BI / Fabric executeQuery REST endpoint
-  const workspaceId = await getWorkspaceId(token);
-  const lakehouseId = await getLakehouseId(token, workspaceId);
-
-  const url = `https://api.fabric.microsoft.com/v1/workspaces/${workspaceId}/lakehouses/${lakehouseId}/tables`;
-  // Fall back to direct SQL endpoint via Fabric SQL REST API
-  return await queryViaSqlEndpoint(token, sql);
-}
-
-async function queryViaSqlEndpoint(token, sql) {
-  // Fabric SQL endpoint REST query API
-  const endpoint = `https://${CONFIG.sqlEndpoint}`;
-  const url = `https://api.fabric.microsoft.com/v1/lakehouse/query`;
-
-  // Use the executeQuery approach via the datawarehouse REST API
-  const resp = await fetch(`https://${CONFIG.sqlEndpoint}/query`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ query: sql })
-  });
-
-  if(!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`Query failed: ${resp.status} — ${txt.substring(0,200)}`);
-  }
-  return await resp.json();
-}
-
 async function getWorkspaceId(token) {
-  const resp = await fetch('https://api.fabric.microsoft.com/v1/workspaces', {
-    headers:{ 'Authorization':'Bearer '+token }
-  });
+  const resp = await fetch('https://api.fabric.microsoft.com/v1/workspaces', { headers:{'Authorization':'Bearer '+token} });
   if(!resp.ok) throw new Error('Could not list workspaces: '+resp.status);
   const data = await resp.json();
-  const ws = data.value?.find(w => w.displayName === 'Doddl_Workspace');
-  if(!ws) throw new Error('Doddl_Workspace not found. Check service principal has Viewer access.');
+  const ws = data.value?.find(w=>w.displayName==='Doddl_Workspace');
+  if(!ws) throw new Error('Doddl_Workspace not found.');
   return ws.id;
 }
 
-async function getLakehouseId(token, workspaceId) {
-  const resp = await fetch(`https://api.fabric.microsoft.com/v1/workspaces/${workspaceId}/lakehouses`, {
-    headers:{ 'Authorization':'Bearer '+token }
-  });
-  if(!resp.ok) throw new Error('Could not list lakehouses: '+resp.status);
-  const data = await resp.json();
-  const lh = data.value?.find(l => l.displayName === 'Doddl_Lakehouse_LIVE_WINSDOR');
-  if(!lh) throw new Error('Lakehouse not found');
-  return lh.id;
-}
-
-// ─── POWER BI REST EXECUTE QUERIES (works with Fabric semantic model) ──────
-async function executeQuery(token, workspaceId, datasetId, dax) {
-  const resp = await fetch(`https://api.powerbi.com/v1.0/myorg/groups/${workspaceId}/datasets/${datasetId}/executeQueries`, {
+async function executeQuery(token, wsId, modelId, dax) {
+  const resp = await fetch(`https://api.powerbi.com/v1.0/myorg/groups/${wsId}/datasets/${modelId}/executeQueries`, {
     method:'POST',
-    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
     body: JSON.stringify({ queries:[{query:dax}], serializerSettings:{includeNulls:true} })
   });
-  if(!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`ExecuteQuery failed ${resp.status}: ${txt.substring(0,300)}`);
-  }
+  if(!resp.ok) { const t=await resp.text(); throw new Error(`Query failed ${resp.status}: ${t.substring(0,200)}`); }
   return await resp.json();
 }
 
-// ─── MAIN DATA LOAD ────────────────────────────────────────────────────────
-let token = null;
-let wsId = null;
-let allData = {};
+function parseDAX(result) {
+  try {
+    const rows = result?.results?.[0]?.tables?.[0]?.rows || [];
+    return rows.map(row => {
+      const out={};
+      Object.keys(row).forEach(k=>{ out[k.replace(/^\[|\]$/g,'').replace(/^.*\[/,'')] = row[k]; });
+      return out;
+    });
+  } catch(e) { return []; }
+}
+
+// ─── MAIN LOAD ─────────────────────────────────────────────────────────────
+let token=null, wsId=null, modelId=null, allData={};
 
 async function loadData() {
   try {
-    // Step 1: Auth
-    setLoad(10, 'Authenticating with Microsoft...');
+    setLoad(10, 'Connecting to Fabric...', 'Authenticating with Microsoft');
     token = await getToken();
-
-    // If null we are redirecting to login
     if(!token) return;
 
-    // Show user name
     if(msalInstance) {
       const accs = msalInstance.getAllAccounts();
-      if(accs.length > 0) document.getElementById("userDisplay").textContent = accs[0].name || accs[0].username;
+      if(accs.length>0) document.getElementById('userDisplay').textContent = accs[0].name || accs[0].username;
     }
 
-    // Step 2: Find workspace
-    setLoad(25, 'Finding Doddl workspace...');
+    setLoad(25, 'Finding workspace...', 'Locating Doddl_Workspace');
     wsId = await getWorkspaceId(token);
 
-    // Step 3: Find semantic model (Doddl_Sales_Model)
-    setLoad(40, 'Connecting to Doddl_Sales_Model...');
-    const modelsResp = await fetch(`https://api.powerbi.com/v1.0/myorg/groups/${wsId}/datasets`, {
-      headers:{ 'Authorization':'Bearer '+token }
-    });
+    setLoad(40, 'Connecting to semantic model...', 'Finding Doddl_Sales_Model');
+    const modelsResp = await fetch(`https://api.powerbi.com/v1.0/myorg/groups/${wsId}/datasets`, { headers:{'Authorization':'Bearer '+token} });
     if(!modelsResp.ok) throw new Error('Cannot access datasets: '+modelsResp.status);
     const models = await modelsResp.json();
-    const model = models.value?.find(m => m.name === 'Doddl_Sales_Model');
-    if(!model) throw new Error('Doddl_Sales_Model not found in workspace. Make sure the semantic model exists.');
+    const model = models.value?.find(m=>m.name==='Doddl_Sales_Model');
+    if(!model) throw new Error('Doddl_Sales_Model not found.');
+    modelId = model.id;
 
-    const modelId = model.id;
+    setLoad(55, 'Loading Shopify data...', 'Querying orders & SKUs');
+    await loadShopifyData();
 
-    // Step 3b: Discover columns (diagnostic)
-    setLoad(45, 'Discovering table schema...');
-    const diagResult = await executeQuery(token, wsId, modelId, `
-      EVALUATE
-      TOPN(2, 'Shopify_Orders_Headers_New')
-    `);
-    const diagRows = diagResult?.results?.[0]?.tables?.[0]?.rows || [];
-    if(diagRows.length > 0) {
-      console.log('Shopify_Orders_Headers_New columns:', Object.keys(diagRows[0]));
-    }
-    const diagLines = await executeQuery(token, wsId, modelId, `
-      EVALUATE
-      TOPN(2, 'Shopify_Orders_Lines')
-    `);
-    const diagLinesRows = diagLines?.results?.[0]?.tables?.[0]?.rows || [];
-    if(diagLinesRows.length > 0) {
-      console.log('Shopify_Orders_Lines columns:', Object.keys(diagLinesRows[0]));
-    }
+    setLoad(70, 'Loading Amazon data...', 'Querying UK, US & EU');
+    await loadAmazonData();
 
-    // Step 4: Query data
-    setLoad(55, 'Querying Shopify orders...');
-    await loadShopifyData(token, wsId, modelId);
+    setLoad(80, 'Loading SKU mapping...', 'Fetching product names & categories');
+    await loadSkuMapping();
 
-    setLoad(70, 'Querying Amazon data...');
-    await loadAmazonData(token, wsId, modelId);
+    setLoad(88, 'Loading ad data...', 'Querying Google Ads campaigns');
+    await loadAdsData();
 
-    setLoad(82, 'Querying ad performance...');
-    await loadAdsData(token, wsId, modelId);
-
-    setLoad(95, 'Building charts...');
+    setLoad(96, 'Building dashboard...', 'Rendering charts');
     buildAllCharts();
+    setLoad(100, 'Done', '');
+    await new Promise(r=>setTimeout(r,350));
 
-    setLoad(100, 'Done');
-    await new Promise(r=>setTimeout(r,400));
-
-    document.getElementById('loadingScreen').style.display='none';
-    document.getElementById('dashboard').style.display='block';
-    document.getElementById('lastRefresh').textContent = 'Refreshed '+new Date().toLocaleTimeString('en-GB');
-    document.getElementById('overviewRefreshTime').textContent = new Date().toLocaleString('en-GB');
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    const now = new Date();
+    document.getElementById('lastRefresh').textContent = 'Refreshed '+now.toLocaleTimeString('en-GB');
+    document.getElementById('overviewRefreshTime').textContent = now.toLocaleString('en-GB');
 
   } catch(err) {
     console.error(err);
@@ -631,276 +631,230 @@ async function loadData() {
   }
 }
 
-// ─── SHOPIFY DATA ─────────────────────────────────────────────────────────
-async function loadShopifyData(token, wsId, modelId) {
-  // Revenue by month - use Headers table only (has date + revenue)
+// ─── SHOPIFY DATA ──────────────────────────────────────────────────────────
+async function loadShopifyData() {
   const revByMonth = await executeQuery(token, wsId, modelId, `
-    EVALUATE
-    SUMMARIZECOLUMNS(
+    EVALUATE SUMMARIZECOLUMNS(
       'Shopify_Orders_Headers_New'[Date Ordered],
       "Revenue", SUM('Shopify_Orders_Headers_New'[Order Total Revenue]),
       "Orders", DISTINCTCOUNT('Shopify_Orders_Headers_New'[Order ID])
-    )
-  `);
+    )`);
 
-  // Revenue by sales channel
   const revByChannel = await executeQuery(token, wsId, modelId, `
-    EVALUATE
-    SUMMARIZECOLUMNS(
+    EVALUATE SUMMARIZECOLUMNS(
       'Shopify_Orders_Headers_New'[Sales Channel],
       "Revenue", SUM('Shopify_Orders_Headers_New'[Order Total Revenue]),
       "Orders", DISTINCTCOUNT('Shopify_Orders_Headers_New'[Order ID]),
       "Units", SUM('Shopify_Orders_Headers_New'[Units Ordered])
-    )
-  `);
+    )`);
 
-  // Top products - from Lines table
   const topProducts = await executeQuery(token, wsId, modelId, `
-    EVALUATE
-    TOPN(10,
+    EVALUATE TOPN(10,
       SUMMARIZECOLUMNS(
         'Shopify_Orders_Lines'[Product Name],
         "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price]),
         "Units", SUM('Shopify_Orders_Lines'[Units Ordered])
-      ),
-      [Revenue], DESC
-    )
-  `);
+      ), [Revenue], DESC
+    )`);
 
-  // Recent orders - from Headers
   const recentOrders = await executeQuery(token, wsId, modelId, `
-    EVALUATE
-    TOPN(50,
-      SELECTCOLUMNS(
-        'Shopify_Orders_Headers_New',
+    EVALUATE TOPN(50,
+      SELECTCOLUMNS('Shopify_Orders_Headers_New',
         "OrderNum", 'Shopify_Orders_Headers_New'[Order Number],
         "Date", 'Shopify_Orders_Headers_New'[Date Ordered],
         "Channel", 'Shopify_Orders_Headers_New'[Sales Channel],
         "Revenue", 'Shopify_Orders_Headers_New'[Order Total Revenue],
         "Status", 'Shopify_Orders_Headers_New'[Order Status]
-      ),
-      [Date], DESC
-    )
-  `);
+      ), [Date], DESC
+    )`);
 
-  // SKU revenue - from Lines
-  const skuRev = await executeQuery(token, wsId, modelId, `
-    EVALUATE
-    TOPN(10,
-      SUMMARIZECOLUMNS(
-        'Shopify_Orders_Lines'[SKU],
-        "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price])
-      ),
-      [Revenue], DESC
-    )
-  `);
+  // All SKU units & revenue from order lines
+  const skuData = await executeQuery(token, wsId, modelId, `
+    EVALUATE SUMMARIZECOLUMNS(
+      'Shopify_Orders_Lines'[SKU],
+      'Shopify_Orders_Lines'[Product Name],
+      "Units", SUM('Shopify_Orders_Lines'[Units Ordered]),
+      "Revenue", SUM('Shopify_Orders_Lines'[Order Line Price])
+    )`);
 
-  allData.shopifyRevByMonth = parseDAX(revByMonth);
+  allData.shopifyRevByMonth   = parseDAX(revByMonth);
   allData.shopifyRevByChannel = parseDAX(revByChannel);
-  allData.shopifyTopProducts = parseDAX(topProducts);
+  allData.shopifyTopProducts  = parseDAX(topProducts);
   allData.shopifyRecentOrders = parseDAX(recentOrders);
-  allData.shopifySkuRev = parseDAX(skuRev);
+  allData.shopifySkuData      = parseDAX(skuData);
 }
 
-// ─── AMAZON DATA ──────────────────────────────────────────────────────────
-async function loadAmazonData(token, wsId, modelId) {
+// ─── AMAZON DATA ───────────────────────────────────────────────────────────
+async function loadAmazonData() {
   const ukByMonth = await executeQuery(token, wsId, modelId, `
-    EVALUATE
-    SUMMARIZECOLUMNS(
+    EVALUATE SUMMARIZECOLUMNS(
       'Amazon_UK_Orders'[Order Date],
       "Revenue", SUM('Amazon_UK_Orders'[Revenue]),
       "Units", SUM('Amazon_UK_Orders'[Units Ordered]),
       "Sessions", SUM('Amazon_UK_Orders'[Sessions])
-    )
-  `);
-
+    )`);
   const usByMonth = await executeQuery(token, wsId, modelId, `
-    EVALUATE
-    SUMMARIZECOLUMNS(
+    EVALUATE SUMMARIZECOLUMNS(
       'Amazon_US_Orders'[Order Date],
       "Revenue", SUM('Amazon_US_Orders'[Revenue]),
       "Units", SUM('Amazon_US_Orders'[Units Ordered])
-    )
-  `);
-
+    )`);
   const euByMonth = await executeQuery(token, wsId, modelId, `
-    EVALUATE
-    SUMMARIZECOLUMNS(
+    EVALUATE SUMMARIZECOLUMNS(
       'Amazon EU Orders'[Order Date],
       "Revenue", SUM('Amazon EU Orders'[Revenue]),
       "Units", SUM('Amazon EU Orders'[Units Ordered])
-    )
-  `);
-
+    )`);
   allData.amazonUK = parseDAX(ukByMonth);
   allData.amazonUS = parseDAX(usByMonth);
   allData.amazonEU = parseDAX(euByMonth);
 }
 
-// ─── ADS DATA ─────────────────────────────────────────────────────────────
-async function loadAdsData(token, wsId, modelId) {
+// ─── SKU MAPPING ───────────────────────────────────────────────────────────
+async function loadSkuMapping() {
   try {
-    const googleCampaigns = await executeQuery(token, wsId, modelId, `
-      EVALUATE
-      SUMMARIZECOLUMNS(
+    const mapping = await executeQuery(token, wsId, modelId, `
+      EVALUATE SELECTCOLUMNS(
+        'doddl_SKU_Mapping',
+        "SKU", 'doddl_SKU_Mapping'[SKU],
+        "ShortName", 'doddl_SKU_Mapping'[Short Name],
+        "Category", 'doddl_SKU_Mapping'[Product Category],
+        "PackType", 'doddl_SKU_Mapping'[Pack Type],
+        "AgeStage", 'doddl_SKU_Mapping'[Age Stage],
+        "Colour", 'doddl_SKU_Mapping'[Colour]
+      )`);
+    allData.skuMapping = parseDAX(mapping);
+  } catch(e) {
+    console.warn('SKU mapping not yet in semantic model:', e.message);
+    allData.skuMapping = [];
+  }
+}
+
+// ─── ADS DATA ──────────────────────────────────────────────────────────────
+async function loadAdsData() {
+  try {
+    const gc = await executeQuery(token, wsId, modelId, `
+      EVALUATE SUMMARIZECOLUMNS(
         'GoogleAds_Campaign'[Campaign],
         "Impressions", SUM('GoogleAds_Campaign'[Impressions]),
         "Clicks", SUM('GoogleAds_Campaign'[Clicks]),
         "Spend", SUM('GoogleAds_Campaign'[Cost]),
         "Conversions", SUM('GoogleAds_Campaign'[Conversions])
-      )
-    `);
-    allData.googleCampaigns = parseDAX(googleCampaigns);
+      )`);
+    allData.googleCampaigns = parseDAX(gc);
   } catch(e) {
     allData.googleCampaigns = [];
     console.warn('Ads data unavailable:', e.message);
   }
 }
 
-// ─── PARSE DAX RESULT ─────────────────────────────────────────────────────
-function parseDAX(result) {
-  try {
-    const table = result?.results?.[0]?.tables?.[0];
-    if(!table) return [];
-    const rows = table.rows || [];
-    return rows.map(row => {
-      const out = {};
-      Object.keys(row).forEach(k => {
-        // Clean DAX column names like "[Revenue]" → "Revenue"
-        const clean = k.replace(/^\[|\]$/g,'').replace(/^.*\[/,'');
-        out[clean] = row[k];
-      });
-      return out;
-    });
-  } catch(e) {
-    console.warn('parseDAX error:', e);
-    return [];
-  }
-}
-
-// ─── BUILD ALL CHARTS ─────────────────────────────────────────────────────
+// ─── BUILD ALL ─────────────────────────────────────────────────────────────
 function buildAllCharts() {
   buildOverviewCharts();
   buildChannelCharts();
+  buildProductCharts();
   buildMarketingCharts();
   buildOrdersCharts();
   buildMonthSelector();
 }
 
+// ─── OVERVIEW ──────────────────────────────────────────────────────────────
 function buildOverviewCharts() {
-  // ── KPIs ──
-  const shopifyTotal = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const shopifyTotal  = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Revenue||0),0);
   const shopifyOrders = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Orders||0),0);
   const amzUKTotal = (allData.amazonUK||[]).reduce((s,r)=>s+(r.Revenue||0),0);
   const amzUSTotal = (allData.amazonUS||[]).reduce((s,r)=>s+(r.Revenue||0),0);
   const amzEUTotal = (allData.amazonEU||[]).reduce((s,r)=>s+(r.Revenue||0),0);
-  const totalRev = shopifyTotal + amzUKTotal + amzUSTotal + amzEUTotal;
-  const totalOrders = shopifyOrders;
-  const aov = shopifyOrders > 0 ? shopifyTotal/shopifyOrders : 0;
+  const totalRev   = shopifyTotal + amzUKTotal + amzUSTotal + amzEUTotal;
+  const aov        = shopifyOrders>0 ? shopifyTotal/shopifyOrders : 0;
 
-  // Latest date
   const allDates = [
-    ...(allData.shopifyRevByMonth||[]).map(r=>toYM(r['Date Ordered']||r['Order Date']||'')),
-    ...(allData.amazonUK||[]).map(r=>toYM(r['Date Ordered']||r['Order Date']||''))
+    ...(allData.shopifyRevByMonth||[]).map(r=>toYM(r['Date Ordered']||'')),
+    ...(allData.amazonUK||[]).map(r=>toYM(r['Order Date']||''))
   ].filter(Boolean).sort();
-  const latestDate = allDates[allDates.length-1];
+  const latestDate = allDates[allDates.length-1] || '—';
 
   setKpi('kpi-revenue', fmtCurr(totalRev));
-  setKpi('kpi-revenue-sub', 'All channels combined');
-  setKpi('kpi-orders', fmtNum(totalOrders));
-  setKpi('kpi-orders-sub', 'Shopify orders');
+  setKpi('kpi-orders', fmtNum(shopifyOrders));
   setKpi('kpi-aov', fmtCurr(aov));
-  setKpi('kpi-aov-sub', 'Shopify avg order value');
   setKpi('kpi-shopify', fmtCurr(shopifyTotal));
   setKpi('kpi-shopify-sub', fmtNum(shopifyOrders)+' orders');
   setKpi('kpi-amazon', fmtCurr(amzUKTotal+amzUSTotal+amzEUTotal));
-  setKpi('kpi-amazon-sub', 'UK + US + EU combined');
-  setKpi('kpi-date', latestDate ? latestDate.substring(0,10) : 'N/A');
+  setKpi('kpi-date', latestDate.substring(0,7));
 
-  // ── Revenue by Month chart ──
   const months = getMonthLabels();
-  const shopifyByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
-  const amzUKByM = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
-  const amzUSByM = aggregateByMonth(allData.amazonUS||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
-  const amzEUByM = aggregateByMonth(allData.amazonEU||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
+  const shopifyByM = aggByMonth(allData.shopifyRevByMonth||[], r=>r['Date Ordered']||'', r=>r.Revenue||0);
+  const ukByM      = aggByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const usByM      = aggByMonth(allData.amazonUS||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const euByM      = aggByMonth(allData.amazonEU||[], r=>r['Order Date']||'', r=>r.Revenue||0);
 
-  if(charts.revenueByMonth) charts.revenueByMonth.destroy();
+  destroyChart('revenueByMonth');
   charts.revenueByMonth = new Chart(document.getElementById('revenueByMonthChart'), {
     type:'bar',
-    data:{
-      labels: months,
-      datasets:[
-        {label:'Shopify',   data:months.map(m=>shopifyByM[m]||0), backgroundColor:'rgba(110,231,183,0.8)', stack:'a', borderRadius:2},
-        {label:'Amazon UK', data:months.map(m=>amzUKByM[m]||0),  backgroundColor:'rgba(129,140,248,0.8)', stack:'a', borderRadius:2},
-        {label:'Amazon US', data:months.map(m=>amzUSByM[m]||0),  backgroundColor:'rgba(251,146,60,0.8)',  stack:'a', borderRadius:2},
-        {label:'Amazon EU', data:months.map(m=>amzEUByM[m]||0),  backgroundColor:'rgba(244,114,182,0.8)', stack:'a', borderRadius:2},
-      ]
-    },
-    options:{...baseOpts(), scales:{
-      x:{stacked:true,grid:{color:G},ticks:{color:T}},
-      y:{stacked:true,grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}
-    }}
+    data:{ labels:months, datasets:[
+      {label:'Shopify',   data:months.map(m=>shopifyByM[m]||0), backgroundColor:AQUA+'cc',   stack:'s', borderRadius:3},
+      {label:'Amazon UK', data:months.map(m=>ukByM[m]||0),      backgroundColor:INDIGO+'cc', stack:'s', borderRadius:3},
+      {label:'Amazon US', data:months.map(m=>usByM[m]||0),      backgroundColor:LIGHT_INDIGO+'cc', stack:'s', borderRadius:3},
+      {label:'Amazon EU', data:months.map(m=>euByM[m]||0),      backgroundColor:ORANGE+'cc', stack:'s', borderRadius:3},
+    ]},
+    options:{...baseOpts(), plugins:{...baseOpts().plugins,legend:{display:true,position:'bottom',labels:{color:T,padding:16,font:{family:'Nunito',size:11,weight:'600'}}}},
+      scales:{ x:{stacked:true,grid:{color:G},ticks:{color:T}}, y:{stacked:true,grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}} }}
   });
 
-  // ── Channel split doughnut ──
-  if(charts.channelSplit) charts.channelSplit.destroy();
+  destroyChart('channelSplit');
   charts.channelSplit = new Chart(document.getElementById('channelSplitChart'), {
     type:'doughnut',
-    data:{
-      labels:['Shopify','Amazon UK','Amazon US','Amazon EU'],
+    data:{ labels:['Shopify','Amazon UK','Amazon US','Amazon EU'],
       datasets:[{data:[shopifyTotal,amzUKTotal,amzUSTotal,amzEUTotal],
-        backgroundColor:['rgba(110,231,183,0.85)','rgba(129,140,248,0.85)','rgba(251,146,60,0.85)','rgba(244,114,182,0.85)'],
-        borderColor:'#0a0a0f', borderWidth:3}]
+        backgroundColor:[AQUA, INDIGO, LIGHT_INDIGO, ORANGE],
+        borderColor:'#ffffff', borderWidth:3}]
     },
     options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
-      plugins:{legend:{display:true,position:'bottom',labels:{color:'#94a3b8',padding:14,font:{size:11}}},
-        tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmtCurr(ctx.raw)}}}}
+      plugins:{legend:{display:true,position:'bottom',labels:{color:T,padding:14,font:{family:'Nunito',size:11,weight:'600'}}},
+        tooltip:{...baseOpts().plugins.tooltip,callbacks:{label:ctx=>ctx.label+': '+fmtCurr(ctx.raw)}}}}
   });
 
-  // ── Orders by month ──
-  const ordersByM = aggregateByMonth(allData.shopifyRevByMonth||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Orders||0);
-  if(charts.ordersByMonth) charts.ordersByMonth.destroy();
+  const ordersByM = aggByMonth(allData.shopifyRevByMonth||[], r=>r['Date Ordered']||'', r=>r.Orders||0);
+  destroyChart('ordersByMonth');
   charts.ordersByMonth = new Chart(document.getElementById('ordersByMonthChart'), {
     type:'bar',
-    data:{labels:months, datasets:[{data:months.map(m=>ordersByM[m]||0), backgroundColor:'rgba(129,140,248,0.7)', borderRadius:3}]},
-    options:baseOpts()
+    data:{labels:months, datasets:[{data:months.map(m=>ordersByM[m]||0), backgroundColor:AQUA+'99', borderRadius:3}]},
+    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T}}}}
   });
 
-  // ── AOV by channel ──
-  const channels = (allData.shopifyRevByChannel||[]).map(r=>r['Sales Channel']||'Unknown').filter(Boolean).slice(0,6);
-  const aovVals = (allData.shopifyRevByChannel||[]).slice(0,6).map(r=>{
-    const rev = r.Revenue||0;
-    const orders = r.Orders||r.Units||1;
-    return +(rev/orders).toFixed(2);
-  });
-  if(charts.aovByChannel) charts.aovByChannel.destroy();
+  destroyChart('aovByChannel');
   charts.aovByChannel = new Chart(document.getElementById('aovByChannelChart'), {
     type:'bar',
-    data:{labels:channels, datasets:[{data:aovVals, backgroundColor:'rgba(251,146,60,0.75)', borderRadius:4}]},
-    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T,font:{size:10}}}, y:{grid:{color:G},ticks:{color:T,callback:v=>'£'+v.toFixed(0)}}}}
+    data:{ labels:['Shopify','Amazon UK','Amazon US','Amazon EU'],
+      datasets:[{data:[aov,
+        (allData.amazonUK||[]).reduce((s,r)=>s+(r.Revenue||0),0) / Math.max((allData.amazonUK||[]).reduce((s,r)=>s+(r.Units||0),0),1),
+        (allData.amazonUS||[]).reduce((s,r)=>s+(r.Revenue||0),0) / Math.max((allData.amazonUS||[]).reduce((s,r)=>s+(r.Units||0),0),1),
+        (allData.amazonEU||[]).reduce((s,r)=>s+(r.Revenue||0),0) / Math.max((allData.amazonEU||[]).reduce((s,r)=>s+(r.Units||0),0),1),
+      ], backgroundColor:[AQUA, INDIGO, LIGHT_INDIGO, ORANGE], borderRadius:4}]
+    },
+    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}}}
   });
 
-  // ── Top products ──
-  const prods = (allData.shopifyTopProducts||[]).slice(0,8);
-  const prodLabels = prods.map(r=>(r['Product Name']||r.Product_Name||'?').substring(0,20));
-  const prodRevs = prods.map(r=>r.Revenue||0);
-  if(charts.topProducts) charts.topProducts.destroy();
+  const topP = (allData.shopifyTopProducts||[]).slice(0,7);
+  destroyChart('topProducts');
   charts.topProducts = new Chart(document.getElementById('topProductsChart'), {
     type:'bar',
-    data:{labels:prodLabels, datasets:[{data:prodRevs, backgroundColor:'rgba(110,231,183,0.7)', borderRadius:4}]},
+    data:{labels:topP.map(r=>(r['Product Name']||r.ProductName||'?').substring(0,20)),
+      datasets:[{data:topP.map(r=>r.Revenue||0), backgroundColor:INDIGO+'aa', borderRadius:3}]},
     options:{...baseOpts(), indexAxis:'y', scales:{x:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}, y:{grid:{color:G},ticks:{color:T,font:{size:10}}}}}
   });
 }
 
+// ─── CHANNELS ──────────────────────────────────────────────────────────────
 function buildChannelCharts() {
+  const shopifyTotal  = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Revenue||0),0);
+  const shopifyOrders = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Orders||0),0);
   const amzUKTotal = (allData.amazonUK||[]).reduce((s,r)=>s+(r.Revenue||0),0);
   const amzUSTotal = (allData.amazonUS||[]).reduce((s,r)=>s+(r.Revenue||0),0);
   const amzEUTotal = (allData.amazonEU||[]).reduce((s,r)=>s+(r.Revenue||0),0);
   const amzUKUnits = (allData.amazonUK||[]).reduce((s,r)=>s+(r.Units||0),0);
   const amzUSUnits = (allData.amazonUS||[]).reduce((s,r)=>s+(r.Units||0),0);
   const amzEUUnits = (allData.amazonEU||[]).reduce((s,r)=>s+(r.Units||0),0);
-  const shopifyTotal = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Revenue||0),0);
-  const shopifyOrders = (allData.shopifyRevByMonth||[]).reduce((s,r)=>s+(r.Orders||0),0);
 
   setKpi('ch-shopify-rev', fmtCurr(shopifyTotal));
   setKpi('ch-shopify-orders', fmtNum(shopifyOrders)+' orders');
@@ -912,156 +866,266 @@ function buildChannelCharts() {
   setKpi('ch-amzeu-rev', fmtCurr(amzEUTotal));
   setKpi('ch-amzeu-units', fmtNum(amzEUUnits)+' units');
 
-  const months = getMonthLabels();
-  const ukByM = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
-  const usByM = aggregateByMonth(allData.amazonUS||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
-  const euByM = aggregateByMonth(allData.amazonEU||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
+  const ukCvr = (allData.amazonUK||[]).filter(r=>r.Sessions>0).map(r=>(r.Units||0)/r.Sessions*100);
+  setKpi('ch-cvr', ukCvr.length?(ukCvr.reduce((a,b)=>a+b,0)/ukCvr.length).toFixed(1)+'%':'—');
 
-  if(charts.amazonByMarket) charts.amazonByMarket.destroy();
+  const months = getMonthLabels();
+  const ukByM = aggByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const usByM = aggByMonth(allData.amazonUS||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+  const euByM = aggByMonth(allData.amazonEU||[], r=>r['Order Date']||'', r=>r.Revenue||0);
+
+  destroyChart('amazonByMarket');
   charts.amazonByMarket = new Chart(document.getElementById('amazonByMarketChart'), {
     type:'bar',
     data:{labels:months, datasets:[
-      {label:'UK', data:months.map(m=>ukByM[m]||0), backgroundColor:'rgba(129,140,248,0.8)', borderRadius:2},
-      {label:'US', data:months.map(m=>usByM[m]||0), backgroundColor:'rgba(251,146,60,0.8)', borderRadius:2},
-      {label:'EU', data:months.map(m=>euByM[m]||0), backgroundColor:'rgba(244,114,182,0.8)', borderRadius:2},
+      {label:'UK',data:months.map(m=>ukByM[m]||0),backgroundColor:INDIGO+'cc',borderRadius:3},
+      {label:'US',data:months.map(m=>usByM[m]||0),backgroundColor:LIGHT_INDIGO+'cc',borderRadius:3},
+      {label:'EU',data:months.map(m=>euByM[m]||0),backgroundColor:ORANGE+'cc',borderRadius:3},
     ]},
-    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}}}
+    options:{...baseOpts(), plugins:{...baseOpts().plugins,legend:{display:true,position:'bottom',labels:{color:T,padding:14,font:{family:'Nunito',size:11,weight:'600'}}}},
+      scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}}}
   });
 
-  // Shopify by channel
   const chData = allData.shopifyRevByChannel||[];
-  if(charts.shopifyChannel) charts.shopifyChannel.destroy();
+  destroyChart('shopifyChannel');
   charts.shopifyChannel = new Chart(document.getElementById('shopifyChannelChart'), {
     type:'doughnut',
-    data:{
-      labels: chData.map(r=>r['Sales Channel']||'Unknown'),
+    data:{ labels:chData.map(r=>r['Sales Channel']||'Unknown'),
       datasets:[{data:chData.map(r=>r.Revenue||0),
-        backgroundColor:['rgba(110,231,183,0.85)','rgba(129,140,248,0.85)','rgba(251,146,60,0.85)','rgba(244,114,182,0.85)','rgba(56,189,248,0.85)'],
-        borderColor:'#0a0a0f', borderWidth:3}]
+        backgroundColor:PALETTE,borderColor:'#ffffff',borderWidth:3}]
     },
     options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
-      plugins:{legend:{display:true,position:'bottom',labels:{color:'#94a3b8',padding:12,font:{size:11}}},
-               tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmtCurr(ctx.raw)}}}}
+      plugins:{legend:{display:true,position:'bottom',labels:{color:T,padding:12,font:{family:'Nunito',size:11,weight:'600'}}},
+        tooltip:{...baseOpts().plugins.tooltip,callbacks:{label:ctx=>ctx.label+': '+fmtCurr(ctx.raw)}}}}
   });
 
-  // Units by market
-  const ukUnitsByM = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Units||0);
-  const usUnitsByM = aggregateByMonth(allData.amazonUS||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Units||0);
-  const euUnitsByM = aggregateByMonth(allData.amazonEU||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Units||0);
-  if(charts.amazonUnits) charts.amazonUnits.destroy();
+  const ukUByM = aggByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Units||0);
+  const usUByM = aggByMonth(allData.amazonUS||[], r=>r['Order Date']||'', r=>r.Units||0);
+  const euUByM = aggByMonth(allData.amazonEU||[], r=>r['Order Date']||'', r=>r.Units||0);
+  destroyChart('amazonUnits');
   charts.amazonUnits = new Chart(document.getElementById('amazonUnitsChart'), {
     type:'line',
     data:{labels:months, datasets:[
-      {label:'UK',data:months.map(m=>ukUnitsByM[m]||0),borderColor:'#818cf8',fill:false,tension:0.4},
-      {label:'US',data:months.map(m=>usUnitsByM[m]||0),borderColor:'#fb923c',fill:false,tension:0.4},
-      {label:'EU',data:months.map(m=>euUnitsByM[m]||0),borderColor:'#f472b6',fill:false,tension:0.4},
+      {label:'UK',data:months.map(m=>ukUByM[m]||0),borderColor:INDIGO,backgroundColor:INDIGO+'15',fill:true,tension:0.4,pointBackgroundColor:INDIGO},
+      {label:'US',data:months.map(m=>usUByM[m]||0),borderColor:LIGHT_INDIGO,backgroundColor:LIGHT_INDIGO+'15',fill:true,tension:0.4,pointBackgroundColor:LIGHT_INDIGO},
+      {label:'EU',data:months.map(m=>euUByM[m]||0),borderColor:ORANGE,backgroundColor:ORANGE+'15',fill:true,tension:0.4,pointBackgroundColor:ORANGE},
     ]},
-    options:baseOpts()
+    options:{...baseOpts(), plugins:{...baseOpts().plugins,legend:{display:true,position:'bottom',labels:{color:T,padding:14,font:{family:'Nunito',size:11,weight:'600'}}}}}
   });
 
-  // CVR
-  const ukCvr = (allData.amazonUK||[]).filter(r=>r.Sessions>0).map(r=>((r.Units||0)/r.Sessions*100));
-  const avgCvr = ukCvr.length ? ukCvr.reduce((a,b)=>a+b,0)/ukCvr.length : 0;
-  setKpi('ch-cvr', avgCvr.toFixed(1)+'%');
-
-  if(charts.amazonCvr) charts.amazonCvr.destroy();
-  const ukSessions = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Sessions||0);
-  const ukCvrByM = aggregateByMonth(allData.amazonUK||[], r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Sessions>0?((r.Units||0)/r.Sessions*100):0);
+  const ukCvrByM = aggByMonth(allData.amazonUK||[], r=>r['Order Date']||'', r=>r.Sessions>0?((r.Units||0)/r.Sessions*100):0);
+  destroyChart('amazonCvr');
   charts.amazonCvr = new Chart(document.getElementById('amazonCvrChart'), {
     type:'line',
-    data:{labels:months, datasets:[{label:'UK CVR %',data:months.map(m=>+(ukCvrByM[m]||0).toFixed(2)),borderColor:'#6ee7b7',backgroundColor:'rgba(110,231,183,0.1)',fill:true,tension:0.4}]},
+    data:{labels:months, datasets:[{label:'UK CVR %',data:months.map(m=>+(ukCvrByM[m]||0).toFixed(2)),borderColor:AQUA,backgroundColor:AQUA+'15',fill:true,tension:0.4,pointBackgroundColor:AQUA}]},
     options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T,callback:v=>v.toFixed(1)+'%'}}}}
   });
 }
 
-function buildMarketingCharts() {
-  const gc = allData.googleCampaigns||[];
-  if(gc.length===0) {
-    setKpi('mkt-impressions','N/A'); setKpi('mkt-clicks','N/A'); setKpi('mkt-spend','N/A');
-    setKpi('mkt-ctr','N/A'); setKpi('mkt-cpc','N/A'); setKpi('mkt-conv','N/A');
+// ─── PRODUCTS & SKUs ───────────────────────────────────────────────────────
+let skuTableData = [];
+
+function buildProductCharts() {
+  const skus = allData.shopifySkuData || [];
+  const mapping = allData.skuMapping || [];
+
+  // Build lookup map from SKU mapping
+  const mapBysku = {};
+  mapping.forEach(m=>{ mapBysku[m.SKU] = m; });
+
+  // Enrich SKU data with mapping info
+  const enriched = skus.map(s => {
+    const m = mapBysku[s.SKU] || {};
+    return {
+      sku:      s.SKU || '—',
+      name:     m.ShortName || s['Product Name'] || s.ProductName || '—',
+      category: m.Category || '—',
+      packType: m.PackType || '—',
+      ageStage: m.AgeStage || '—',
+      units:    s.Units || 0,
+      revenue:  s.Revenue || 0,
+    };
+  }).filter(s=>s.sku && s.sku!=='—' && s.units>0);
+
+  // Sort by units desc by default
+  enriched.sort((a,b)=>b.units-a.units);
+  skuTableData = enriched;
+
+  const totalUnits = enriched.reduce((s,r)=>s+r.units,0);
+  const bundleUnits = enriched.filter(r=>r.packType==='Bundle').reduce((s,r)=>s+r.units,0);
+  const topByUnits = enriched[0] || {};
+  const topByRev = [...enriched].sort((a,b)=>b.revenue-a.revenue)[0] || {};
+
+  setKpi('sku-total-units', fmtNum(totalUnits));
+  setKpi('sku-count', fmtNum(enriched.length));
+  setKpi('sku-top-units', topByUnits.sku || '—');
+  setKpi('sku-top-units-sub', fmtNum(topByUnits.units||0)+' units');
+  setKpi('sku-top-rev', topByRev.sku || '—');
+  setKpi('sku-top-rev-sub', fmtCurr(topByRev.revenue||0)+' revenue');
+  setKpi('sku-bundle-units', fmtNum(bundleUnits));
+  setKpi('sku-avg-units', enriched.length?fmtNum(Math.round(totalUnits/enriched.length)):'—');
+
+  // Chart: top 15 by units
+  const top15 = enriched.slice(0,15);
+  const barColors = top15.map(r=>r.packType==='Bundle'?AQUA:r.packType==='Twin Pack'||r.packType==='Triple Pack'?LIGHT_INDIGO:INDIGO);
+
+  destroyChart('skuUnits');
+  charts.skuUnits = new Chart(document.getElementById('skuUnitsChart'), {
+    type:'bar',
+    data:{labels:top15.map(r=>r.sku), datasets:[{
+      label:'Units Sold',
+      data:top15.map(r=>r.units),
+      backgroundColor:barColors, borderRadius:4
+    }]},
+    options:{...baseOpts(), indexAxis:'y',
+      scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T,font:{size:10,weight:'600'}}}},
+      plugins:{...baseOpts().plugins, tooltip:{...baseOpts().plugins.tooltip,
+        callbacks:{label:ctx=>{const d=top15[ctx.dataIndex]; return [`Units: ${fmtNum(d.units)}`, `Revenue: ${fmtCurr(d.revenue)}`, `${d.name}`];}}}}
+    }
+  });
+
+  // Chart: by category
+  const catMap = {};
+  enriched.forEach(r=>{ catMap[r.category]=(catMap[r.category]||0)+r.units; });
+  const cats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+
+  destroyChart('skuCategory');
+  charts.skuCategory = new Chart(document.getElementById('skuCategoryChart'), {
+    type:'doughnut',
+    data:{ labels:cats.map(c=>c[0]), datasets:[{data:cats.map(c=>c[1]),
+      backgroundColor:PALETTE, borderColor:'#ffffff', borderWidth:3}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{display:true,position:'bottom',labels:{color:T,padding:12,font:{family:'Nunito',size:11,weight:'600'}}},
+        tooltip:{...baseOpts().plugins.tooltip,callbacks:{label:ctx=>ctx.label+': '+fmtNum(ctx.raw)+' units'}}}}
+  });
+
+  renderSkuTable(enriched, totalUnits);
+}
+
+function renderSkuTable(data, totalUnits) {
+  const tbody = document.getElementById('skuTableBody');
+  if(!data.length) {
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text-muted)">No SKU data available — ensure doddl_SKU_Mapping is added to Doddl_Sales_Model</td></tr>';
     return;
   }
-  const totalImpr = gc.reduce((s,r)=>s+(r.Impressions||0),0);
-  const totalClicks = gc.reduce((s,r)=>s+(r.Clicks||0),0);
-  const totalSpend = gc.reduce((s,r)=>s+(r.Spend||r.Cost||0),0);
-  const totalConv = gc.reduce((s,r)=>s+(r.Conversions||0),0);
-  const ctr = totalImpr>0?totalClicks/totalImpr*100:0;
-  const cpc = totalClicks>0?totalSpend/totalClicks:0;
+  const tot = totalUnits || data.reduce((s,r)=>s+r.units,0);
+  tbody.innerHTML = data.map((r,i)=>{
+    const pct = tot>0 ? (r.units/tot*100).toFixed(1) : '0.0';
+    const packPill = r.packType==='Bundle'
+      ? `<span class="pill pill-bundle">Bundle</span>`
+      : r.packType==='Single'
+        ? `<span class="pill pill-single">Single</span>`
+        : r.packType!=='—' ? `<span class="pill pill-cat">${r.packType}</span>` : '—';
+    return `<tr>
+      <td class="label">${r.sku}</td>
+      <td class="label" style="font-weight:600;color:var(--text-muted)">${r.name}</td>
+      <td>${r.category}</td>
+      <td>${packPill}</td>
+      <td style="color:var(--indigo);font-weight:700">${fmtNum(r.units)}</td>
+      <td>${fmtCurr(r.revenue)}</td>
+      <td>${r.units>0?fmtCurr(r.revenue/r.units):'—'}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span>${pct}%</span>
+          <div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:${Math.min(parseFloat(pct)*3,100)}%"></div></div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
 
+function sortSkuTable(by, btn) {
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = [...skuTableData];
+  if(by==='units')   data.sort((a,b)=>b.units-a.units);
+  if(by==='revenue') data.sort((a,b)=>b.revenue-a.revenue);
+  if(by==='sku')     data.sort((a,b)=>a.sku.localeCompare(b.sku));
+  const tot = data.reduce((s,r)=>s+r.units,0);
+  renderSkuTable(data, tot);
+}
+
+// ─── MARKETING ─────────────────────────────────────────────────────────────
+function buildMarketingCharts() {
+  const gc = allData.googleCampaigns||[];
+  if(!gc.length) {
+    ['mkt-impressions','mkt-clicks','mkt-spend','mkt-ctr','mkt-cpc','mkt-conv'].forEach(id=>setKpi(id,'N/A'));
+    return;
+  }
+  const totalImpr  = gc.reduce((s,r)=>s+(r.Impressions||0),0);
+  const totalClicks= gc.reduce((s,r)=>s+(r.Clicks||0),0);
+  const totalSpend = gc.reduce((s,r)=>s+(r.Spend||r.Cost||0),0);
+  const totalConv  = gc.reduce((s,r)=>s+(r.Conversions||0),0);
   setKpi('mkt-impressions', fmtNum(totalImpr));
   setKpi('mkt-clicks', fmtNum(totalClicks));
   setKpi('mkt-spend', fmtCurr(totalSpend));
-  setKpi('mkt-ctr', ctr.toFixed(2)+'%');
-  setKpi('mkt-cpc', fmtCurr(cpc));
+  setKpi('mkt-ctr', totalImpr>0?(totalClicks/totalImpr*100).toFixed(2)+'%':'—');
+  setKpi('mkt-cpc', totalClicks>0?fmtCurr(totalSpend/totalClicks):'—');
   setKpi('mkt-conv', fmtNum(totalConv));
 
   const top8 = [...gc].sort((a,b)=>(b.Spend||0)-(a.Spend||0)).slice(0,8);
-  if(charts.topCampaigns) charts.topCampaigns.destroy();
+  destroyChart('topCampaigns');
   charts.topCampaigns = new Chart(document.getElementById('topCampaignsChart'), {
     type:'bar',
-    data:{
-      labels:top8.map(r=>(r.Campaign||'?').substring(0,22)),
-      datasets:[{data:top8.map(r=>r.Spend||r.Cost||0), backgroundColor:'rgba(251,146,60,0.75)', borderRadius:4}]
-    },
+    data:{labels:top8.map(r=>(r.Campaign||'?').substring(0,22)),
+      datasets:[{data:top8.map(r=>r.Spend||0), backgroundColor:AQUA+'cc', borderRadius:4}]},
     options:{...baseOpts(), indexAxis:'y', scales:{x:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}, y:{grid:{color:G},ticks:{color:T,font:{size:10}}}}}
   });
 }
 
+// ─── ORDERS ────────────────────────────────────────────────────────────────
 function buildOrdersCharts() {
-  const orders = allData.shopifyRevByMonth||[];
-  const months = getMonthLabels();
-  const ordersByM = aggregateByMonth(orders, r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Orders||0);
-  const revByM = aggregateByMonth(orders, r=>(r['Date Ordered']||r['Order Date']||r['Month']||''), r=>r.Revenue||0);
-
+  const orders  = allData.shopifyRevByMonth||[];
+  const months  = getMonthLabels();
+  const ordersByM = aggByMonth(orders, r=>r['Date Ordered']||'', r=>r.Orders||0);
   const totalOrders = orders.reduce((s,r)=>s+(r.Orders||0),0);
-  const totalRev = orders.reduce((s,r)=>s+(r.Revenue||0),0);
-  const days = months.length * 30;
+  const totalRev    = orders.reduce((s,r)=>s+(r.Revenue||0),0);
+  const skus = allData.shopifySkuData||[];
 
   setKpi('ord-total', fmtNum(totalOrders));
-  setKpi('ord-daily', (totalOrders/Math.max(days,1)).toFixed(0));
+  setKpi('ord-daily', (totalOrders/Math.max(months.length*30,1)).toFixed(0));
   setKpi('ord-rev', fmtCurr(totalRev));
-
-  const skus = allData.shopifySkuRev||[];
-  setKpi('ord-topsku', skus[0]?.SKU||skus[0]?.['SKU']||'—');
+  const topSku = [...skus].sort((a,b)=>(b.Revenue||0)-(a.Revenue||0))[0];
+  setKpi('ord-topsku', topSku?.SKU||'—');
   setKpi('ord-products', fmtNum(skus.length));
   setKpi('ord-cancel', '—');
 
-  if(charts.ordersOverTime) charts.ordersOverTime.destroy();
+  destroyChart('ordersOverTime');
   charts.ordersOverTime = new Chart(document.getElementById('ordersOverTimeChart'), {
     type:'bar',
-    data:{labels:months, datasets:[{data:months.map(m=>ordersByM[m]||0), backgroundColor:'rgba(110,231,183,0.7)', borderRadius:3}]},
-    options:baseOpts()
+    data:{labels:months, datasets:[{data:months.map(m=>ordersByM[m]||0), backgroundColor:AQUA+'99', borderRadius:3}]},
+    options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T}}}}
   });
 
-  if(charts.skuRevenue) charts.skuRevenue.destroy();
+  const top10 = [...skus].sort((a,b)=>(b.Revenue||0)-(a.Revenue||0)).slice(0,10);
+  destroyChart('skuRevenue');
   charts.skuRevenue = new Chart(document.getElementById('skuRevenueChart'), {
     type:'bar',
-    data:{labels:skus.map(r=>(r.SKU||'?').substring(0,18)), datasets:[{data:skus.map(r=>r.Revenue||0), backgroundColor:'rgba(129,140,248,0.75)', borderRadius:4}]},
+    data:{labels:top10.map(r=>(r.SKU||'?').substring(0,18)),
+      datasets:[{data:top10.map(r=>r.Revenue||0), backgroundColor:INDIGO+'aa', borderRadius:4}]},
     options:{...baseOpts(), indexAxis:'y', scales:{x:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}, y:{grid:{color:G},ticks:{color:T,font:{size:10}}}}}
   });
 
-  // Recent orders table
   const tbody = document.getElementById('recentOrdersBody');
   const recent = allData.shopifyRecentOrders||[];
-  if(recent.length===0){
-    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No order data available</td></tr>';
-    return;
-  }
+  if(!recent.length) { tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No order data</td></tr>'; return; }
   tbody.innerHTML = recent.slice(0,50).map(r=>{
-    const cancelled = r.Cancelled||r['Order Cancelled Date'];
-    const status = cancelled ? '<span style="color:var(--negative)">Cancelled</span>' : '<span style="color:var(--positive)">Active</span>';
-    const date = (r.Date||r['Month']||'').toString().substring(0,10);
+    const status = r['Order Cancelled Date']||r.Status==='cancelled'
+      ? '<span style="color:var(--negative);font-weight:700">Cancelled</span>'
+      : '<span style="color:var(--positive);font-weight:700">Active</span>';
+    const date = (r.Date||'').toString().substring(0,10);
     return `<tr>
-      <td class="label">${r.OrderNum||r['Order Number']||'—'}</td>
+      <td class="label">${r.OrderNum||'—'}</td>
       <td>${date}</td>
-      <td>${r.Channel||r['Sales Channel']||'—'}</td>
-      <td>—</td>
+      <td>${r.Channel||'—'}</td>
+      <td style="color:var(--indigo);font-weight:700">${fmtCurr(r.Revenue||0)}</td>
       <td>${status}</td>
     </tr>`;
   }).join('');
 }
 
-// ─── MONTH DETAIL ─────────────────────────────────────────────────────────
+// ─── MONTHLY DETAIL ────────────────────────────────────────────────────────
 let monthRevChart2=null, monthOrdChart2=null;
 
 function buildMonthSelector() {
@@ -1080,59 +1144,49 @@ function buildMonthSelector() {
 
 function selectMonth(month) {
   document.getElementById('monthChartTitle').textContent = month+' — Revenue by Channel';
-  document.getElementById('monthTableTitle').textContent = month+' — Detailed Breakdown';
-
-  const shopifyRev = (allData.shopifyRevByMonth||[]).find(r=>(r['Date Ordered']||r['Order Date']||r['Month']||'').substring(0,7)===month.replace(' ','').substring(0,7));
-  const amzUK = (allData.amazonUK||[]).find(r=>(r['Date Ordered']||r['Order Date']||r['Month']||'').substring(0,7)===toYearMonth(month));
-  const amzUS = (allData.amazonUS||[]).find(r=>(r['Date Ordered']||r['Order Date']||r['Month']||'').substring(0,7)===toYearMonth(month));
-  const amzEU = (allData.amazonEU||[]).find(r=>(r['Date Ordered']||r['Order Date']||r['Month']||'').substring(0,7)===toYearMonth(month));
+  const ym = toYearMonth(month);
+  const shopifyRev = (allData.shopifyRevByMonth||[]).find(r=>toYM(r['Date Ordered']||'').substring(0,7)===ym);
+  const amzUK = (allData.amazonUK||[]).find(r=>toYM(r['Order Date']||'').substring(0,7)===ym);
+  const amzUS = (allData.amazonUS||[]).find(r=>toYM(r['Order Date']||'').substring(0,7)===ym);
+  const amzEU = (allData.amazonEU||[]).find(r=>toYM(r['Order Date']||'').substring(0,7)===ym);
 
   const revData = [
-    {label:'Shopify', rev:shopifyRev?.Revenue||0, orders:shopifyRev?.Orders||0},
-    {label:'Amazon UK', rev:amzUK?.Revenue||0, units:amzUK?.Units||0},
-    {label:'Amazon US', rev:amzUS?.Revenue||0, units:amzUS?.Units||0},
-    {label:'Amazon EU', rev:amzEU?.Revenue||0, units:amzEU?.Units||0},
+    {label:'Shopify',    rev:shopifyRev?.Revenue||0, cnt:shopifyRev?.Orders||0, isOrders:true},
+    {label:'Amazon UK',  rev:amzUK?.Revenue||0,      cnt:amzUK?.Units||0},
+    {label:'Amazon US',  rev:amzUS?.Revenue||0,      cnt:amzUS?.Units||0},
+    {label:'Amazon EU',  rev:amzEU?.Revenue||0,      cnt:amzEU?.Units||0},
   ];
 
   if(monthRevChart2) monthRevChart2.destroy();
   monthRevChart2 = new Chart(document.getElementById('monthRevenueChart'), {
     type:'bar',
     data:{labels:revData.map(r=>r.label), datasets:[{data:revData.map(r=>r.rev),
-      backgroundColor:['rgba(110,231,183,0.8)','rgba(129,140,248,0.8)','rgba(251,146,60,0.8)','rgba(244,114,182,0.8)'],
-      borderRadius:6}]},
+      backgroundColor:[AQUA,INDIGO,LIGHT_INDIGO,ORANGE], borderRadius:6}]},
     options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T,callback:v=>fmtCurr(v)}}}}
   });
 
   if(monthOrdChart2) monthOrdChart2.destroy();
   monthOrdChart2 = new Chart(document.getElementById('monthOrdersChart'), {
     type:'bar',
-    data:{labels:['Shopify','Amazon UK','Amazon US','Amazon EU'],
-      datasets:[{data:[shopifyRev?.Orders||0, amzUK?.Units||0, amzUS?.Units||0, amzEU?.Units||0],
-      backgroundColor:['rgba(110,231,183,0.7)','rgba(129,140,248,0.7)','rgba(251,146,60,0.7)','rgba(244,114,182,0.7)'],
-      borderRadius:6}]},
+    data:{labels:revData.map(r=>r.label), datasets:[{data:revData.map(r=>r.cnt),
+      backgroundColor:[AQUA+'99',INDIGO+'99',LIGHT_INDIGO+'99',ORANGE+'99'], borderRadius:6}]},
     options:{...baseOpts(), scales:{x:{grid:{color:G},ticks:{color:T}}, y:{grid:{color:G},ticks:{color:T}}}}
   });
 
-  const tbody=document.getElementById('monthTableBody');
-  tbody.innerHTML=revData.map(r=>{
-    const isShopify=r.label==='Shopify';
-    const pill=r.label==='Shopify'?'':'pill pill-'+(r.label.toLowerCase().replace('amazon ','amz').replace(' ',''));
-    return `<tr>
-      <td class="label">${r.label}</td>
-      <td>${fmtCurr(r.rev)}</td>
-      <td>${isShopify?fmtNum(r.orders||0)+' orders':fmtNum(r.units||0)+' units'}</td>
-      <td>${r.orders>0?fmtCurr(r.rev/(r.orders||1)):r.units>0?fmtCurr(r.rev/(r.units||1)):'—'}</td>
-      <td>—</td>
-      <td>—</td>
-    </tr>`;
-  }).join('');
+  document.getElementById('monthTableBody').innerHTML = revData.map(r=>`<tr>
+    <td class="label">${r.label}</td>
+    <td style="color:var(--indigo);font-weight:700">${fmtCurr(r.rev)}</td>
+    <td>${fmtNum(r.cnt)} ${r.isOrders?'orders':'units'}</td>
+    <td>${r.cnt>0?fmtCurr(r.rev/r.cnt):'—'}</td>
+    <td>—</td><td>—</td>
+  </tr>`).join('');
 }
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────
+// ─── HELPERS ───────────────────────────────────────────────────────────────
 function getMonthLabels() {
   const set = new Set();
-  [...(allData.shopifyRevByMonth||[]), ...(allData.amazonUK||[])].forEach(r=>{
-    const d = r['Month'] || r['Date Ordered'] || r['Order Date'] || '';
+  [...(allData.shopifyRevByMonth||[]),...(allData.amazonUK||[])].forEach(r=>{
+    const d = r['Date Ordered']||r['Order Date']||'';
     const ym = toYM(d);
     if(ym) set.add(ym);
   });
@@ -1144,17 +1198,11 @@ function getMonthLabels() {
 
 function toYM(d) {
   if(!d) return '';
-  // Power BI can return dates as: "/Date(1234567890000)/" or "2025-01-15T00:00:00" or "2025-01-15"
-  const s = d.toString();
-  // Handle /Date(ms)/ format
-  const msMatch = s.match(/\/Date\((\d+)\)\//);
-  if(msMatch) {
-    const dt = new Date(parseInt(msMatch[1]));
-    return dt.getFullYear()+'-'+(dt.getMonth()+1).toString().padStart(2,'0');
-  }
-  // Handle ISO / standard date string
-  const match = s.match(/(\d{4})-(\d{2})/);
-  if(match) return match[1]+'-'+match[2];
+  const s=d.toString();
+  const ms=s.match(/\/Date\((\d+)\)\//);
+  if(ms) { const dt=new Date(parseInt(ms[1])); return dt.getFullYear()+'-'+(dt.getMonth()+1).toString().padStart(2,'0'); }
+  const m=s.match(/(\d{4})-(\d{2})/);
+  if(m) return m[1]+'-'+m[2];
   return '';
 }
 
@@ -1164,18 +1212,19 @@ function toYearMonth(label) {
   return y+'-'+(months.indexOf(m)+1).toString().padStart(2,'0');
 }
 
-function aggregateByMonth(rows, dateGetter, valGetter) {
+function aggByMonth(rows, dateGetter, valGetter) {
   const out={};
   rows.forEach(r=>{
-    const d=dateGetter(r);
-    const ym = toYM(d);
+    const ym=toYM(dateGetter(r));
     if(!ym) return;
-    const [y,m]=ym.split('-');
-    const label=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]+' '+y;
+    const [y,mo]=ym.split('-');
+    const label=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1]+' '+y;
     out[label]=(out[label]||0)+valGetter(r);
   });
   return out;
 }
+
+function destroyChart(key) { if(charts[key]) { charts[key].destroy(); delete charts[key]; } }
 
 function switchTab(id, el) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1192,10 +1241,8 @@ async function refreshData() {
 
 async function signOut() {
   if(msalInstance) {
-    const accounts = msalInstance.getAllAccounts();
-    if(accounts.length > 0) {
-      await msalInstance.logoutRedirect({ account: accounts[0] });
-    }
+    const accs=msalInstance.getAllAccounts();
+    if(accs.length>0) await msalInstance.logoutRedirect({account:accs[0]});
   }
 }
 
